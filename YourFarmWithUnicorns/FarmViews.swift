@@ -161,6 +161,10 @@ struct CharacterEditor: View {
     var body: some View {
         ScrollView {
         VStack(spacing: 20) {
+            if player == nil {
+                Image("UnicornBrand").resizable().scaledToFit().frame(height: 95)
+                    .clipShape(RoundedRectangle(cornerRadius: 22)).accessibilityHidden(true)
+            }
             Text(player == nil ? "Welcome to Your Farm With Unicorns" : "Edit Character").font(.title.bold())
             TextField("Your name", text: $name).textFieldStyle(.roundedBorder).font(.title2)
                 .autocorrectionDisabled().submitLabel(.done)

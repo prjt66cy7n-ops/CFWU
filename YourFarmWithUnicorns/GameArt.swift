@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import SpriteKit
 
 extension Palette {
     var color: Color { Color(uiColor: uiColor) }
@@ -20,6 +21,23 @@ extension Palette {
 // production atlases can replace these images without changing stable horse IDs.
 enum GameArt {
     private static let cache = NSCache<NSString, UIImage>()
+    // Inset equal atlas cells to exclude the painted sheet's separating gutter.
+    static func environment(sheet: String, column: Int, row: Int) -> UIImage? {
+        let key = "environment-\(sheet)-\(column)-\(row)" as NSString
+        if let image = cache.object(forKey: key) { return image }
+        guard let image = region(sheet: sheet, column: column, row: row, columns: 2, rows: 2),
+              let full = image.cgImage,
+              let cropped = full.cropping(to: CGRect(x: 8, y: 8, width: CGFloat(full.width - 16), height: CGFloat(full.height - 16))) else { return nil }
+        let result = UIImage(cgImage: cropped); cache.setObject(result, forKey: key)
+        return result
+    }
+    static func background(sheet: String, column: Int, row: Int, size: CGSize) -> SKSpriteNode? {
+        guard let image = environment(sheet: sheet, column: column, row: row) else { return nil }
+        let node = SKSpriteNode(texture: SKTexture(image: image))
+        node.size = size; node.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        node.zPosition = -10
+        return node
+    }
     static func region(sheet: String, column: Int, row: Int, columns: Int, rows: Int) -> UIImage? {
         let key = "\(sheet)-\(column)-\(row)" as NSString
         if let image = cache.object(forKey: key) { return image }

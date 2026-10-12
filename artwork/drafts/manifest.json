@@ -154,5 +154,49 @@
     "has_transparency": true,
     "transparent_pixel_fraction": 0.5052,
     "sha256": "23a5128e5e4343a7c1ba2447467861c3eac5ed66fb10c2848536a2ff24f3f863"
+  },
+  {
+    "file": "ChoreEnvironmentSheet.png",
+    "title": "Stables, wash bay, paddock and coop backgrounds",
+    "width": 2056,
+    "height": 765,
+    "columns": 2,
+    "rows": 2,
+    "status": "bundled-environment-sheet",
+    "has_transparency": false,
+    "sha256": "ffd5f080f7eacc01d8bdbd65ea2b5fea028331809bae6d50166a3d1f99da4f03"
+  },
+  {
+    "file": "FarmEnvironmentSheet.png",
+    "title": "Arena, round yard, farmhouse and navigation backgrounds",
+    "width": 1536,
+    "height": 1024,
+    "columns": 2,
+    "rows": 2,
+    "status": "bundled-environment-sheet",
+    "has_transparency": false,
+    "sha256": "50556fedce8e4b36a2b69ba6d96b89663dda154dede2841f723f402f345a5abc"
+  },
+  {
+    "file": "HorseBodySheet.png",
+    "title": "Thirteen full-body care horses",
+    "width": 1262,
+    "height": 1246,
+    "columns": 4,
+    "rows": 4,
+    "status": "bundled-care-sheet",
+    "has_transparency": true,
+    "sha256": "6b7560d4f13ee97ecdd3564711be70813da05051b519e72ac3b32dca4e1850f0"
+  },
+  {
+    "file": "UnicornBrand.png",
+    "title": "Unicorn branding and app icon source",
+    "width": 1254,
+    "height": 1254,
+    "columns": 1,
+    "rows": 1,
+    "status": "bundled-branding-master",
+    "has_transparency": false,
+    "sha256": "3fadf3d839cb54b30a2775421af076def0bbfe1976437bf72ee462dc02db4a59"
   }
 ]

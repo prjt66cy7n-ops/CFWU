@@ -10,7 +10,7 @@ The game is ready for build and device testing, not a finished App Store release
 2. In Finder open **YourFarmWithUnicorns.xcodeproj** inside that folder. Open this file specifically; opening the whole folder or `Package.swift` opens the core test library instead of the app.
 3. Select the shared **YourFarmWithUnicorns** scheme and a **named iPad simulator**, then press **⌘R**. Simulator builds do not need a signing team.
 4. Keep the existing app installed in the simulator if you want to retain its child saves. The bundle identifier and save format are unchanged.
-5. Press **⌘U** for the 32 model tests and one UI smoke test. Run the UI test in a fresh simulator: it intentionally checks first-launch setup and creates a test child. Existing personal saves are not erased by the test code.
+5. Press **⌘U** for the 32 model tests and two UI tests. UI tests use isolated UUID-named temporary saves in Debug builds, so first-launch and flight checks do not touch existing child profiles.
 
 Requires Xcode 15+ and an installed iOS simulator runtime. Real iPad installation needs your own signing team and unique bundle identifier.
 
@@ -39,7 +39,7 @@ Large activity buttons choose a task. A brief moving-hand demonstration and glow
 - Arena's three preset courses count as its three distinct activities; round yard has walk, trot, canter and poles. The farmhouse itself does not award a ribbon.
 - After three ribbons, tap the sparkling hiding spot in the farmhouse. One discovery unlocks the reusable wand at stables for the rest of that day.
 - At stables tap the wand tray, then drag the wand onto the horse. Every horse can become a winged unicorn with a white base coat, retained identifying markings and size, and palette-matched mane/tail. It is ridden bareback with tack hidden.
-- Flight lasts about **38 seconds**, including transformation and finale, above the same draft farm layout as the map. Tap stars for rainbow trail, and hearts/butterflies/rings for optional effects. There is no steering, score or failure condition.
+- Flight lasts about **38 seconds**, including transformation and finale, above the same illustrated farm layout as the map. Tap stars for rainbow trail, and hearts/butterflies/rings for optional effects. There is no steering, score or failure condition.
 - The finale says **“What a wonderful day!”** and returns to the map. Home exits immediately at any point. Flight appearance is temporary rendering state; it never overwrites the saved horse or tack, so normal appearance returns instantly.
 - The device's local date is checked during play, on scene changes and after app reactivation. At midnight ribbons, activity tracking and wand availability reset; rider, horse, tack and audio preferences remain. Flight pauses when the app is inactive.
 
@@ -80,3 +80,7 @@ Nine generated PNG sheets are bundled for portrait/outfit/tack previews, care an
 The map and activity backgrounds, mounted horses/riders, gaits and wingbeats remain clearly labelled procedural drafts. Final scene layers and animation exports need integration using the approved concepts; exact approved pixels cannot be reconstructed from concept IDs. The white Model Y is still a labelled map placeholder. Licensed/finished music and animal recordings, app icon, release signing, accessibility tuning and device performance QA are outstanding.
 
 The concept lineup had 14 entries; the provisional 13-horse catalog omits the second generic bay, Charlie. The other twelve names remain placeholders. Lake swimming, hidden trail rides, pony club/horse float, accounts, purchases, advertising and online dependencies are outside v1.
+
+## Illustrated build update
+
+Eight illustrated environment cells now cover every area and the shared navigation/flight map. All thirteen horses have full-body care artwork, with saved tack overlaid. Riding uses smoother gait-specific procedural animation. New unicorn branding appears on first launch. The icon master still needs platform-sized export, and mounted horse/unicorn sprites and sound recordings remain production work. The second native UI test starts from a clearly isolated three-ribbon fixture, discovers the wand through the normal farmhouse UI, drags it onto the horse, checks early Home, awaits the real 38-second replay, and checks saved relaunch and reusable wand. The new native build result is pending; the passing run above refers to the previous gameplay version.

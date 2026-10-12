@@ -18,7 +18,7 @@ concurrency:
 jobs:
   ipad:
     runs-on: macos-15
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - name: Select an available iPad simulator
@@ -48,7 +48,7 @@ jobs:
           def count(name): return int(metrics.get(name, {}).get('_value', 0))
           total, failed, skipped = count('testsCount'), count('testsFailedCount'), count('testsSkippedCount')
           print(f'::notice::Native iPad tests: {total} executed, {failed} failed, {skipped} skipped.')
-          if total < 33 or failed or skipped:
+          if total < 34 or failed or skipped:
               raise SystemExit('Required native tests did not all execute successfully')
           PY
           fi

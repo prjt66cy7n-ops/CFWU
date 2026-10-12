@@ -46,7 +46,7 @@ struct FarmTasksScreen: View {
                 Spacer()
                 if area == .stables {
                     Button(action: chooseHorse) { Label("Choose Horse", systemImage: "heart.fill") }.accessibilityIdentifier("choose-horse")
-                    if player.canFly { Button(action: wand) { Text("🪄").font(.title) }.accessibilityLabel("Transform and fly") }
+                    if player.canFly { Button(action: wand) { Text("🪄").font(.title) }.accessibilityLabel("Transform and fly").accessibilityIdentifier("launch-wand") }
                 }
                 if area == .washBay {
                     ForEach(Palette.allCases, id: \.self) { palette in
@@ -159,11 +159,15 @@ struct FarmhouseScreen: View {
                         }.frame(maxWidth: .infinity, minHeight: 150)
                             .background(.regularMaterial).clipShape(RoundedRectangle(cornerRadius: 24))
                     }
+                    .accessibilityIdentifier("wand-search-\(index)")
                 }
             }
             Spacer(minLength: 0)
-            Text("Draft room artwork").font(.caption)
-        }.onAppear { withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true)) { pulse = true } }
+        }.padding(12).background {
+            if let image = GameArt.environment(sheet: "FarmEnvironmentSheet", column: 0, row: 1) {
+                Image(uiImage: image).resizable().scaledToFill().clipped().opacity(0.65)
+            }
+        }.clipped().onAppear { withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true)) { pulse = true } }
             .onChange(of: player.dailyDate) { _ in opened = [] }
     }
 }
@@ -178,9 +182,11 @@ struct WandLaunchScreen: View {
                 let horseCenter = CGPoint(x: geometry.size.width / 2, y: geometry.size.height * 0.3)
                 let wandCenter = CGPoint(x: geometry.size.width / 2, y: geometry.size.height * 0.78)
                 HorsePortrait(horse: player.horse).frame(width: 230, height: 230).position(horseCenter)
+                    .accessibilityIdentifier("wand-target")
                 Text("↑ ✨").font(.largeTitle).position(x: wandCenter.x, y: geometry.size.height * 0.55)
                 Text("🪄").font(.system(size: 90)).frame(width: 130, height: 130)
                     .position(x: wandCenter.x + offset.width, y: wandCenter.y + offset.height)
+                    .accessibilityIdentifier("wand-drag")
                     .gesture(DragGesture().onChanged { offset = $0.translation }.onEnded { value in
                         let drop = CGPoint(x: wandCenter.x + value.translation.width, y: wandCenter.y + value.translation.height)
                         if CGRect(x: horseCenter.x - 140, y: horseCenter.y - 140, width: 280, height: 280).contains(drop) { launch() }

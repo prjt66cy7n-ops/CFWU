@@ -34,9 +34,11 @@ final class RidingScene: SKScene {
             post.position = CGPoint(x: 500 + cos(angle) * 448, y: 310 + sin(angle) * 259)
             post.fillColor = .brown; post.strokeColor = .clear; addChild(post)
         }
-        let artLabel = SKLabelNode(text: "DRAFT RIDING ART")
-        artLabel.fontName = "AvenirNext-DemiBold"; artLabel.fontSize = 12
-        artLabel.fontColor = .darkGray; artLabel.position = CGPoint(x: 500, y: 18); addChild(artLabel)
+        if let background = GameArt.background(sheet: "FarmEnvironmentSheet", column: mode == .arena ? 0 : 1, row: 0, size: size) {
+            // Keep the model's whole playable footprint visible over the scenery.
+            addChild(background); footing.fillColor = footing.fillColor.withAlphaComponent(0.4)
+            footing.strokeColor = footing.strokeColor.withAlphaComponent(0.3)
+        }
         obstacles.zPosition = 1; addChild(obstacles); addChild(horse)
         rebuildEquipment()
         renderHorse()

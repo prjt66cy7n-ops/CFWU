@@ -109,6 +109,7 @@ struct FlightScreen: View {
     }
     var body: some View {
         SpriteView(scene: scene).clipShape(RoundedRectangle(cornerRadius: 24))
+            .accessibilityIdentifier("unicorn-flight")
             .onAppear { scene.onFinish = finish; updatePause() }
             .onDisappear { scene.pause() }
             .onChange(of: paused) { _ in updatePause() }

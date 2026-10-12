@@ -3,7 +3,9 @@ import XCTest
 final class AppSmokeTests: XCTestCase {
     @MainActor func testLaunchStableChoresRibbonHorseSelectionAndNavigation() {
         continueAfterFailure = false
-        let app = XCUIApplication(); app.launch()
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-store", UUID().uuidString]
+        app.launch()
         let name = app.textFields["player-name"]
         XCTAssertTrue(name.waitForExistence(timeout: 15))
         name.tap(); name.typeText("CI Farmer\n")
@@ -36,6 +38,37 @@ final class AppSmokeTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["CI Farmer’s Farm"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Daisy · Pink"].exists)
         XCTAssertEqual(app.otherElements["ribbon-stables"].label, "Stables ribbon earned")
+    }
+    @MainActor func testWandDiscoveryFlightEarlyHomeAndCompleteReplay() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-store", UUID().uuidString, "--ui-test-flight-ready"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Sunny · Purple"].waitForExistence(timeout: 15))
+        app.buttons["visit-farmhouse"].tap()
+        app.buttons["wand-search-0"].tap()
+        XCTAssertTrue(app.staticTexts["🪄 Your wand is waiting at the stables"].waitForExistence(timeout: 5))
+        app.buttons["home"].tap()
+        startFlight(app)
+        app.buttons["home"].tap()
+        XCTAssertTrue(app.staticTexts["Sunny · Purple"].waitForExistence(timeout: 5))
+        startFlight(app)
+        // Await the genuine 38-second scene, without advancing its clock in a fixture.
+        XCTAssertTrue(app.staticTexts["Sunny · Purple"].waitForExistence(timeout: 55))
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.staticTexts["Sunny · Purple"].waitForExistence(timeout: 15))
+        app.buttons["visit-stables"].tap()
+        XCTAssertTrue(app.buttons["launch-wand"].waitForExistence(timeout: 5))
+    }
+    @MainActor private func startFlight(_ app: XCUIApplication) {
+        app.buttons["visit-stables"].tap()
+        app.buttons["launch-wand"].tap()
+        let wand = app.descendants(matching: .any).matching(identifier: "wand-drag").firstMatch
+        let target = app.descendants(matching: .any).matching(identifier: "wand-target").firstMatch
+        XCTAssertTrue(wand.waitForExistence(timeout: 5)); XCTAssertTrue(target.exists)
+        wand.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .press(forDuration: 0.2, thenDragTo: target.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
+        XCTAssertTrue(app.otherElements["unicorn-flight"].waitForExistence(timeout: 5))
     }
     @MainActor private func assertCompleted(_ app: XCUIApplication) {
         let result = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Tap the activity to play again")).firstMatch

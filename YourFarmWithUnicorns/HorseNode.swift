@@ -18,6 +18,7 @@ final class HorseNode: SKNode {
     private var wings: [SKShapeNode] = []
     private var tailNode: SKShapeNode?
     private var headNode: SKShapeNode?
+    private var carePortrait: SKSpriteNode?
     init(player: Player, mounted: Bool = true, unicorn: Bool = false) {
         ponyScale = CGFloat(player.horse.size.scale)
         super.init()
@@ -102,11 +103,27 @@ final class HorseNode: SKNode {
                 wing.zPosition = -0.1; figure.addChild(wing); wings.append(wing)
             }
         }
+        if !mounted && !unicorn,
+           let image = GameArt.region(sheet: "HorseBodySheet", column: player.horse.portraitIndex % 4,
+                                      row: player.horse.portraitIndex / 4, columns: 4, rows: 4) {
+            let painted = SKSpriteNode(texture: SKTexture(image: image))
+            painted.size = CGSize(width: 96, height: 96); painted.zPosition = 1
+            figure.isHidden = true; addChild(painted); carePortrait = painted
+            // Care portraits face left; keep saved tack visible on their actual body.
+            for (visible, node, location) in [
+                (player.tack.saddlePad, pad, CGPoint(x: 7, y: 3)),
+                (player.tack.saddle, saddle, CGPoint(x: 7, y: 7)),
+                (player.tack.bridle, bridle, CGPoint(x: -32, y: 12))
+            ] where visible {
+                node.removeFromParent(); node.position = location; node.zPosition = 2; addChild(node)
+            }
+        }
         setScale(ponyScale)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
     func eat() {
         headNode?.run(.repeat(.sequence([.moveBy(x: 0, y: -3, duration: 0.2), .moveBy(x: 0, y: 3, duration: 0.2)]), count: 4))
+        carePortrait?.run(.repeat(.sequence([.rotate(toAngle: 0.035, duration: 0.25), .rotate(toAngle: 0, duration: 0.25)]), count: 4))
     }
     func flickTail() {
         tailNode?.run(.sequence([.rotate(toAngle: 0.5, duration: 0.15), .rotate(toAngle: -0.3, duration: 0.15), .rotate(toAngle: 0, duration: 0.2)]))
@@ -124,14 +141,17 @@ final class HorseNode: SKNode {
         lastDirection += delta * 0.22
         figure.zRotation = CGFloat(lastDirection)
         let cadence = gait == .walk ? 5.0 : (gait == .trot ? 9.0 : 12.0)
-        let phase = moving ? Int(time * cadence) % 4 : 0
+        let cycle = time * cadence
+        let offsets: [Double] = gait == .walk ? [0, .pi, .pi * 1.5, .pi * 0.5] :
+            (gait == .trot ? [0, .pi, .pi, 0] : [0, 0.8, .pi, .pi + 0.8])
         for (index, leg) in legs.enumerated() {
             let direction = (index == 0 || index == 3) ? 1.0 : -1.0
-            let stride = moving ? sin(Double(phase) * .pi / 2) * direction * 6 : 0
+            let stride = moving ? sin(cycle + offsets[index]) * (gait == .walk ? 4 : 7) : 0
             leg.position.y = CGFloat(index < 2 ? 15 : -19) + CGFloat(stride)
             leg.zRotation = jumpHeight > 1 ? CGFloat(direction * 0.5) : CGFloat(stride * 0.03)
         }
-        figure.position.y = CGFloat(jumpHeight) + (moving && jumpHeight == 0 ? CGFloat(phase % 2) * 1.5 : 0)
+        figure.position.y = CGFloat(jumpHeight) + (moving && jumpHeight == 0 ? CGFloat(abs(sin(cycle * 2))) * 1.5 : 0)
+        if moving { tailNode?.zRotation = CGFloat(sin(cycle * 0.5) * 0.12) }
         shadow.setScale(jumpHeight > 1 ? 0.8 : 1)
         zPosition = CGFloat(700 - point.y)
     }

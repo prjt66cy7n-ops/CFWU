@@ -92,6 +92,12 @@ final class TaskScene: SKScene {
         floor.strokeColor = .brown; floor.lineWidth = 4; floor.zPosition = -3; world.addChild(floor)
         let activity = game.activity
         let coop = [.eggs, .grain, .coopWater, .sweepCoop, .straw, .treats].contains(activity)
+        let paddock = [.manure, .trough, .paddockWater, .hay, .fence].contains(activity)
+        let washBay = [.brush, .hooves, .wash, .tack].contains(activity)
+        if let background = GameArt.background(sheet: "ChoreEnvironmentSheet", column: coop || washBay ? 1 : 0,
+                                               row: coop || paddock ? 1 : 0, size: size) {
+            world.addChild(background); floor.isHidden = true
+        }
         if coop {
             for index in 0..<3 {
                 sprite("chicken-\(index)", sheet: "ChickenPoseSheet", column: index == 0 ? 0 : index - 1,

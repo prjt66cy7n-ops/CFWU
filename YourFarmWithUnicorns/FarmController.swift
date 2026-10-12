@@ -9,7 +9,7 @@ import SwiftUI
     private let store: SaveStore
     var active: Player? { farm.players.first { $0.id == farm.activeProfileID } }
     init(store: SaveStore? = nil) {
-        self.store = store ?? SaveStore(url: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        self.store = store ?? Self.testStore() ?? SaveStore(url: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("YourFarmWithUnicorns/profiles.json"))
         do { farm = try self.store.load() }
         catch {
@@ -17,6 +17,31 @@ import SwiftUI
             catch { storageBlocked = true; message = "The saved game could not be read or safely backed up. Please close the app and check device storage before trying again." }
         }
         refreshDay()
+    }
+    private static func testStore() -> SaveStore? {
+        #if DEBUG
+        // UI fixtures use their own random temporary save, never a child's real file.
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "--ui-test-store"), arguments.indices.contains(index + 1),
+              let id = UUID(uuidString: arguments[index + 1]) else { return nil }
+        let store = SaveStore(url: FileManager.default.temporaryDirectory
+            .appendingPathComponent("cfwu-ui-\(id.uuidString).json"))
+        if arguments.contains("--ui-test-flight-ready"), !FileManager.default.fileExists(atPath: store.url.path) {
+            var player = Player(name: "Flight Farmer", rider: .girl, palette: .purple)
+            player.refreshDay(); player.selectedHorseID = "sunny"
+            player.tack = Tack(saddlePad: true, saddle: true, bridle: true)
+            player.musicEnabled = false; player.sfxEnabled = false
+            for area in [FarmArea.stables, .washBay, .paddock] {
+                for activity in area.activityIDs.sorted().prefix(3) { _ = player.completeActivity(area: area, activity: activity) }
+            }
+            player.wandSpot = 0
+            var farm = SavedFarm(); farm.players = [player]; farm.activeProfileID = player.id
+            do { try store.save(farm) } catch { assertionFailure("Could not prepare isolated UI fixture: \(error)") }
+        }
+        return store
+        #else
+        return nil
+        #endif
     }
     func save() {
         guard !storageBlocked else { return }

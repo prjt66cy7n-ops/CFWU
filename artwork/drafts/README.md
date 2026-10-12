@@ -63,3 +63,24 @@ The sheets were generated from written art descriptions. They do not reconstruct
 ## Farmhouse wand-search furniture
 
 ![Farmhouse search furniture](farmhouse-search-sheet.png)
+
+## Illustrated scene and care artwork
+
+These new paintings interpret the supplied concept direction; they are not identical exports of the original mockups. Equal atlas cells are cropped at runtime with an inset excluding divider gutters. All eight environment cells and thirteen care horses are bundled. Mounted riding and flying horses still use procedural animation. The branding master is also used on the welcome screen; a platform-sized app-icon export is still required.
+
+### ChoreEnvironmentSheet
+
+![ChoreEnvironmentSheet](ChoreEnvironmentSheet.png)
+
+### FarmEnvironmentSheet
+
+![FarmEnvironmentSheet](FarmEnvironmentSheet.png)
+
+### HorseBodySheet
+
+![HorseBodySheet](HorseBodySheet.png)
+
+### UnicornBrand
+
+![UnicornBrand](UnicornBrand.png)
+
