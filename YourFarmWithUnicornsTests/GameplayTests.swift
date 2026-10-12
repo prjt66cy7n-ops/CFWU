@@ -101,8 +101,8 @@ final class GameplayTests: XCTestCase {
     func testAllFourHoovesMustBeLiftedAndPicked() {
         var game = ChoreGame(activity: .hooves)
         for index in 0..<4 {
-            game.tapTarget(index); XCTAssertEqual(game.liftedHoof, index)
-            for _ in 0..<3 { game.tapTarget(index) }
+            game.liftHoof(index); XCTAssertEqual(game.liftedHoof, index)
+            for _ in 0..<3 { game.pickLiftedHoof() }
             XCTAssertEqual(game.hoofPicks[index], 3)
         }
         XCTAssertTrue(game.completed); XCTAssertEqual(game.collection.count, 4)

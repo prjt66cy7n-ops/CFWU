@@ -2,6 +2,12 @@ name: iPad build and smoke test
 on:
   push:
     branches: [main]
+    paths:
+      - 'YourFarmWithUnicorns/**'
+      - 'YourFarmWithUnicorns.xcodeproj/**'
+      - 'YourFarmWithUnicornsTests/**'
+      - 'YourFarmWithUnicornsUITests/**'
+      - '.github/workflows/ipad.yml'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -33,6 +39,19 @@ jobs:
           xcodebuild test -project YourFarmWithUnicorns.xcodeproj -scheme YourFarmWithUnicorns -destination "platform=iOS Simulator,id=$IPAD_SIMULATOR_ID" -derivedDataPath DerivedData -resultBundlePath NativeTests.xcresult -jobs 3 CODE_SIGNING_ALLOWED=NO > native-tests.log 2>&1
           status=$?
           set -e
+          if [ "$status" -eq 0 ]; then
+            xcrun xcresulttool get --legacy --format json --path NativeTests.xcresult > /tmp/native-results.json
+            python3 - <<'PY'
+          import json
+          data = json.load(open('/tmp/native-results.json'))
+          metrics = data.get('metrics', {})
+          def count(name): return int(metrics.get(name, {}).get('_value', 0))
+          total, failed, skipped = count('testsCount'), count('testsFailedCount'), count('testsSkippedCount')
+          print(f'::notice::Native iPad tests: {total} executed, {failed} failed, {skipped} skipped.')
+          if total < 32 or failed or skipped:
+              raise SystemExit('Required native tests did not all execute successfully')
+          PY
+          fi
           tail -n 100 native-tests.log
           {
             echo '## iPad simulator test output'

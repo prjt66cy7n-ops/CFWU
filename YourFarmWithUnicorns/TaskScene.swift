@@ -27,7 +27,7 @@ final class TaskScene: SKScene {
             return game.bucketFull ? "Drag the full bucket to your horse" : (game.bucketAtTap ? "Tap the tap to fill your bucket" : "Drag the bucket under the tap")
         case .brush: return "Brush back and forth over your horse"
         case .wash: return ["Drag the hose to wet the coat", "Scrub with the sponge", "Drag the hose to rinse"][min(2, game.stage)]
-        case .hooves: return "Tap a hoof to lift · Tap three times to pick · Do all four"
+        case .hooves: return "Tap a hoof to lift · Tap the pick three times · Do all four"
         case .tack: return "Drag pad, saddle and bridle onto the horse · Tap equipped tack to remove"
         case .eggs: return "Tap a nest · Drag each egg to the basket"
         case .straw: return "Tap each nest to clear straw · Drag fresh straw into it"
@@ -257,11 +257,14 @@ final class TaskScene: SKScene {
         }
         guard !game.completed else { return }
         if name.hasPrefix("hoof-"), let index = Int(name.dropFirst(5)) {
-            game.tapTarget(index); game.progress = Double(game.hoofPicks.reduce(0, +)) / 12
-            GameAudio.effect("pick", enabled: player.sfxEnabled); render(); notify(); return
+            game.liftHoof(index); render(); notify(); return
         }
         if name.hasPrefix("nest-"), let index = Int(name.dropFirst(5)) {
             game.tapTarget(index); render(); notify(); return
+        }
+        if name == "tool" && game.activity == .hooves {
+            game.pickLiftedHoof(); game.progress = Double(game.hoofPicks.reduce(0, +)) / 12
+            GameAudio.effect("pick", enabled: player.sfxEnabled); render(); notify(); return
         }
         if name == "tap" { game.tapTarget(); GameAudio.effect("water", enabled: player.sfxEnabled); render(); notify(); return }
         if name == "tool" && (game.activity == .fence || (game.activity == .trough && game.stage == 1)) {
@@ -283,7 +286,9 @@ final class TaskScene: SKScene {
             let oldStage = game.stage
             game.scrub(distance: Double(hypot(point.x - previous.x, point.y - previous.y)))
             if oldStage != game.stage { self.dragging = nil; dragPosition = nil; lastDrag = nil }
-            render(); notify()
+            render()
+            if oldStage != game.stage { demonstrate() }
+            notify()
         }
         lastDrag = self.dragging == nil ? nil : point
     }
@@ -307,7 +312,8 @@ final class TaskScene: SKScene {
     private func demonstrate() {
         let hand = SKLabelNode(text: "👆"); hand.fontSize = 40; hand.zPosition = 3000; hand.position = source
         let destination: CGPoint
-        if game.activity == .manure { hand.position = pilePoint(0); destination = CGPoint(x: 175, y: 320) }
+        if game.activity == .trough && game.stage == 1 { destination = source }
+        else if game.activity == .manure { hand.position = pilePoint(0); destination = CGPoint(x: 175, y: 320) }
         else if [.eggs, .straw].contains(game.activity) { hand.position = nestPoint(0); destination = game.activity == .eggs ? CGPoint(x: 165, y: 270) : source }
         else if game.activity == .hooves { destination = hoofPoint(0) }
         else if [.stableWater, .paddockWater].contains(game.activity) { destination = CGPoint(x: 180, y: 335) }

@@ -163,6 +163,14 @@ struct ChoreGame {
         default: break
         }
     }
+    mutating func liftHoof(_ index: Int) {
+        guard activity == .hooves, !completed, (0..<4).contains(index), hoofPicks[index] < 3 else { return }
+        liftedHoof = index
+    }
+    mutating func pickLiftedHoof() {
+        guard activity == .hooves, let index = liftedHoof else { return }
+        tapTarget(index)
+    }
     mutating func dropAtTap() {
         guard [.stableWater, .paddockWater].contains(activity), !completed else { return }
         bucketAtTap = true
