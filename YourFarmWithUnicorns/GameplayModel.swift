@@ -240,7 +240,9 @@ struct FlightGame {
     var routeProgress: Double { min(1, max(0, (elapsed - 2.5) / 32.5)) }
     mutating func step(seconds: Double) {
         guard !exited, seconds.isFinite, seconds > 0 else { return }
-        elapsed = min(Self.duration, elapsed + min(seconds, 0.1))
+        // Flight is a timed presentation, not collision physics. Preserve real
+        // elapsed foreground time even when the renderer drops frames.
+        elapsed = min(Self.duration, elapsed + seconds)
     }
     mutating func tapStar() { if phase == .flying { rainbowStars += 1 } }
     mutating func home() { exited = true }

@@ -197,4 +197,12 @@ final class GameplayTests: XCTestCase {
         flight.home(); XCTAssertEqual(flight.phase, .finished)
         flight.step(seconds: 0.1); XCTAssertEqual(flight.elapsed, 0)
     }
+    func testFlightDurationDoesNotStretchWhenFramesAreDropped() {
+        var flight = FlightGame()
+        for _ in 0..<152 { flight.step(seconds: 0.25) }
+        XCTAssertEqual(flight.elapsed, FlightGame.duration)
+        XCTAssertEqual(flight.phase, .finished)
+        flight.step(seconds: .infinity)
+        XCTAssertEqual(flight.elapsed, FlightGame.duration)
+    }
 }
