@@ -1,6 +1,6 @@
 # Draft artwork gallery
 
-These are generated artwork sources for **Your Farm With Unicorns**, not integrated runtime sprites or finished animation atlases. No further art approval is required; continue processing and production in the agreed visual style.
+These are generated artwork sources for **Your Farm With Unicorns**, not finished animation atlases. Stage 2 bundles the horse portrait, rider palette and tack palette sheets for static UI previews; remaining sheets are production sources only. No further art approval is required; continue processing and production in the agreed visual style.
 
 The original care-and-tack sheet was approved as the style direction. All new PNGs have alpha transparency, confirmed by reading their channels. Some preview tools display colors stored under fully transparent pixels; those colors are not visible during correct alpha compositing.
 

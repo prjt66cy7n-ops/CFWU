@@ -1,24 +1,13 @@
 import SwiftUI
 import SpriteKit
 
-private extension Palette {
-    var color: Color {
-        switch self {
-        case .pink: return .pink
-        case .purple: return .purple
-        case .blue: return .blue
-        case .green: return .green
-        case .red: return .red
-        case .blackGold: return .black
-        }
-    }
-}
 struct FarmRootView: View {
     @EnvironmentObject private var game: FarmController
     @State private var area: FarmArea?
     @State private var players = false
     @State private var editing = false
     @State private var settings = false
+    @State private var choosingHorse = false
     @State private var scene = FarmScene()
     private let dayTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
     var body: some View {
@@ -43,7 +32,19 @@ struct FarmRootView: View {
                         }
                         .padding().background(.regularMaterial).clipShape(RoundedRectangle(cornerRadius: 20))
                         if let area {
-                            activity(area)
+                            if area == .arena || area == .roundYard {
+                                RidingScreen(player: game.active!, mode: area == .arena ? .arena : .roundYard,
+                                             paused: settings || players || editing || choosingHorse) { activity in
+                                    game.recordActivity(area: area.rawValue, activity: activity)
+                                    GameAudio.chime(enabled: game.active?.sfxEnabled ?? false)
+                                }.id("\(game.active!.id)-\(area.rawValue)")
+                            } else if area == .stables {
+                                StableScreen { choosingHorse = true }
+                            } else if area == .washBay {
+                                TackScreen { editing = true }
+                            } else {
+                                activity(area)
+                            }
                         } else {
                             Text("Your Farm With Unicorns").font(.title2.bold())
                             Text("Tap a place to visit").font(.headline)
@@ -57,7 +58,12 @@ struct FarmRootView: View {
                                 }
                             }
                             Text("TEMPORARY MAP ART · Wash bay is the stable verandah").font(.caption)
-                            Text("Daily ribbons: \(game.active!.ribbons.count) · Activities arrive in later stages").font(.caption)
+                            HStack {
+                                HorsePortrait(horse: game.active!.horse).frame(width: 52, height: 52)
+                                Text("\(game.active!.horse.name) · \(game.active!.palette.label)")
+                                Spacer()
+                                Text("Daily ribbons: \(game.active!.ribbons.count) · Rewards arrive in Stage 4")
+                            }.font(.caption)
                         }
                         Spacer(minLength: 0)
                     }.padding(24)
@@ -66,6 +72,7 @@ struct FarmRootView: View {
         }
         .buttonStyle(.borderedProminent).tint(.brown)
         .sheet(isPresented: $players) { PlayerPicker { players = false; area = nil } }
+        .sheet(isPresented: $choosingHorse) { HorsePicker { choosingHorse = false } }
         .sheet(isPresented: $editing) {
             CharacterEditor(player: game.active) { name, rider, palette in
                 game.edit(name: name, rider: rider, palette: palette); editing = false
@@ -75,8 +82,8 @@ struct FarmRootView: View {
             NavigationStack {
                 Form {
                     Toggle("Music", isOn: Binding(get: { game.active?.musicEnabled ?? true }, set: { value in game.update { $0.musicEnabled = value } }))
-                    Toggle("Sound effects", isOn: Binding(get: { game.active?.sfxEnabled ?? true }, set: { value in game.update { $0.sfxEnabled = value } }))
-                    Text("Preferences save per player. Music and sound files have not been supplied; this prototype is silent.")
+                    Toggle("Sound effects", isOn: Binding(get: { game.active?.sfxEnabled ?? true }, set: { value in game.update { $0.sfxEnabled = value }; if !value { GameAudio.stopEffects() } }))
+                    Text("Preferences save per player. Course and circuit chimes follow Sound Effects. Background music will be added with later assets.")
                 }.navigationTitle("Sound").toolbar { Button("Done") { settings = false } }
             }
         }
@@ -90,8 +97,11 @@ struct FarmRootView: View {
             Text(place.icon).font(.system(size: 84))
             Text(place.title).font(.largeTitle.bold())
             Text("TEMPORARY SCENE · Activities coming in later stages").font(.headline)
-            Text("\(game.active!.rider == .boy ? "👦" : "👧")  🐴 Roo").font(.system(size: 60))
-                .padding().background(game.active!.palette.color.opacity(0.25)).clipShape(RoundedRectangle(cornerRadius: 24))
+            HStack {
+                RiderPortrait(rider: game.active!.rider, palette: game.active!.palette).frame(width: 90, height: 140)
+                HorsePortrait(horse: game.active!.horse).frame(width: 180, height: 140)
+            }.padding().background(game.active!.palette.color.opacity(0.15)).clipShape(RoundedRectangle(cornerRadius: 24))
+            Text(game.active!.horse.name).font(.title2.bold())
             Text("Outfit: \(game.active!.palette.label)")
             if place == .washBay {
                 Button { editing = true } label: { Label("Edit Character", systemImage: "person.crop.circle") }
@@ -133,9 +143,8 @@ struct CharacterEditor: View {
                     }.buttonStyle(.plain).accessibilityAddTraits(palette == choice ? .isSelected : [])
                 }
             }
-            Text(rider == .boy ? "👦" : "👧").font(.system(size: 70)).padding()
-                .background(palette.color.opacity(0.3)).clipShape(Circle())
-            Text("TEMPORARY RIDER ART").font(.caption)
+            RiderPortrait(rider: rider, palette: palette).frame(height: 130)
+            Text("Draft rider artwork").font(.caption)
             Button(player == nil ? "🏡 Go to my farm" : "Save Character") { submit(name, rider, palette) }
                 .buttonStyle(.borderedProminent).controlSize(.large)
                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

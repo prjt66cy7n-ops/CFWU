@@ -40,6 +40,12 @@ import SwiftUI
         guard let index = farm.players.firstIndex(where: { $0.id == farm.activeProfileID }) else { return }
         change(&farm.players[index]); save()
     }
+    func selectHorse(_ id: String) { update { $0.selectHorse(id) } }
+    func recordActivity(area: String, activity: String) {
+        refreshDay()
+        guard active?.completedActivities[area]?.contains(activity) != true else { return }
+        update { $0.completedActivities[area, default: []].insert(activity) }
+    }
     func refreshDay() {
         let previousPlayers = farm.players
         let previousActive = farm.activeProfileID
