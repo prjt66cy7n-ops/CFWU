@@ -24,7 +24,7 @@ struct FarmRootView: View {
                     header(player)
                     RibbonRow(player: player)
                     playArea(player)
-                    Text("Draft artwork · Your Farm With Unicorns").font(.caption2).foregroundColor(.secondary)
+                    Text("Your Farm With Unicorns").font(.caption2).foregroundColor(.secondary)
                 }.padding(16)
             } else {
                 CharacterEditor(player: nil) { name, rider, palette in game.create(name: name, rider: rider, palette: palette) }
@@ -184,7 +184,7 @@ struct CharacterEditor: View {
                 }
             }
             RiderPortrait(rider: rider, palette: palette).frame(height: 130)
-            Text("Draft rider artwork").font(.caption)
+            Text("Choose your rider and colours").font(.caption)
             Button(player == nil ? "🏡 Go to my farm" : "Save Character") { nameFocused = false; submit(name, rider, palette) }
                 .buttonStyle(.borderedProminent).controlSize(.large).accessibilityIdentifier("save-character")
                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

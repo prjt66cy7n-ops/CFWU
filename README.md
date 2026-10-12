@@ -2,7 +2,7 @@
 
 A complete **v1 gameplay prototype** for an offline, landscape-only iPad farm game, with independent local child profiles. All seven farm areas, daily ribbons, the wand search, and a winged-unicorn flight are implemented. The app uses SwiftUI + SpriteKit with no third-party app dependencies or gameplay network calls.
 
-The game is ready for build and device testing, not a finished App Store release: scenery and animal animation are still draft artwork. Original concept illustrations remain visual references rather than runtime animation assets. Twelve horse names are provisional. The native build and automated iPad checks passed for gameplay commit `06fa761`: **33 tests executed, 0 failed, 0 skipped** (32 model tests plus one UI smoke test). [View the passing run](https://github.com/prjt66cy7n-ops/CFWU/actions/runs/38244343760). This is simulator validation, not final artwork approval or real-device release QA.
+The game has illustrated environments, all thirteen painted care horses, articulated overhead riding/unicorn artwork and an automatically exported app icon. It is ready for native build and device testing; App Store signing and real-device release QA remain. Generated art follows the concept direction rather than reproducing exact reference pixels. Twelve horse names are provisional. The native build and automated iPad checks passed for gameplay commit `06fa761`: **33 tests executed, 0 failed, 0 skipped** (32 model tests plus one UI smoke test). [View the passing run](https://github.com/prjt66cy7n-ops/CFWU/actions/runs/38244343760). This is simulator validation, not final artwork approval or real-device release QA.
 
 ## Open the app on your Mac
 
@@ -10,7 +10,7 @@ The game is ready for build and device testing, not a finished App Store release
 2. In Finder open **YourFarmWithUnicorns.xcodeproj** inside that folder. Open this file specifically; opening the whole folder or `Package.swift` opens the core test library instead of the app.
 3. Select the shared **YourFarmWithUnicorns** scheme and a **named iPad simulator**, then press **⌘R**. Simulator builds do not need a signing team.
 4. Keep the existing app installed in the simulator if you want to retain its child saves. The bundle identifier and save format are unchanged.
-5. Press **⌘U** for the 32 model tests and two UI tests plus a native artwork-resource test. UI tests use isolated UUID-named temporary saves in Debug builds, so first-launch and flight checks do not touch existing child profiles.
+5. Press **⌘U** for the 33 model tests, two UI tests and a native artwork-resource test. UI tests use isolated UUID-named temporary saves in Debug builds, so first-launch and flight checks do not touch existing child profiles.
 
 Requires Xcode 15+ and an installed iOS simulator runtime. Real iPad installation needs your own signing team and unique bundle identifier.
 
@@ -53,7 +53,7 @@ Music and SFX toggles are independent and saved per child. Nine original synthes
 
 ## Validation and core tests
 
-The Linux cloud compiled and passed all **32 pure-Swift model tests**, parsed Apple-platform sources, and verified project source membership, shared scheme references, PNG integrity, and all 20 bundled audio resources. This does not resolve Apple SDK APIs or establish UI behavior. GitHub's macOS workflow built the real app and passed 33 native tests, including the iPad UI smoke test for launch, three stable chores, a ribbon, horse selection, all-area Home navigation, and saved relaunch behavior. It also reads the result bundle to reject zero-test, skipped-test or failed-test runs.
+The Linux cloud compiled and passed all **33 pure-Swift model tests**, parsed Apple-platform sources, and verified project source membership, shared scheme references, PNG integrity, and all 20 bundled audio resources. This does not resolve Apple SDK APIs or establish UI behavior. GitHub's macOS workflow built the real app and passed 33 native tests, including the iPad UI smoke test for launch, three stable chores, a ribbon, horse selection, all-area Home navigation, and saved relaunch behavior. It also reads the result bundle to reject zero-test, skipped-test or failed-test runs.
 
 ```sh
 bash scripts/setup-swift-core.sh  # Linux only, if compiler is missing
@@ -75,9 +75,11 @@ The pinned Swift 6.0.3 archive is signature-verified before extraction using the
 
 ## Artwork and remaining release work
 
-Nine generated PNG sheets are bundled for portrait/outfit/tack previews, care and coop props, scenery pieces, magic effects and farmhouse search furniture. `GameArt` renders atlas regions in memory; original sheets and provenance notes remain in `artwork/drafts`. Some silhouettes touch grid boundaries and still need production separation/edge cleanup.
+Sixteen PNG assets are bundled for illustrated scenery, full-body care horses, overhead normal/unicorn rigs, a painted wing, portrait/outfit/tack previews, tools, magic effects and farmhouse furniture. `GameArt` crops atlas regions in memory, trims transparent margins for the rigs, and excludes environment divider gutters. Source masters and provenance notes remain in `artwork/drafts`.
 
-The map and activity backgrounds, mounted horses/riders, gaits and wingbeats remain clearly labelled procedural drafts. Final scene layers and animation exports need integration using the approved concepts; exact approved pixels cannot be reconstructed from concept IDs. The white Model Y is still a labelled map placeholder. Licensed/finished music and animal recordings, app icon, release signing, accessibility tuning and device performance QA are outstanding.
+The navigation map and flight share one illustrated farm. New environment paintings follow the supplied concept direction, with interactive tools and animals rendered separately. Overhead horses use separate painted head, body and tail sections above gait-specific articulated legs, with rider/tack layers and animated painted wings. A shader matches unicorn hair to the child's palette. The native build exports an opaque 1024px AppIcon from the original branding master using the macOS SDK; its PNG output is intentionally ignored and regenerated during build. Some older prop silhouettes touch atlas boundaries and may benefit from edge cleanup after device review.
+
+Original synthesized music and feedback/animal effects are bundled. Recorded animal sounds and orchestral instrumentation can improve audio fidelity. Remaining release work is Apple signing and distribution, full real-iPad touch/performance/accessibility QA, and optional visual/audio refinements.
 
 The concept lineup had 14 entries; the provisional 13-horse catalog omits the second generic bay, Charlie. The other twelve names remain placeholders. Lake swimming, hidden trail rides, pony club/horse float, accounts, purchases, advertising and online dependencies are outside v1.
 
