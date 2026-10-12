@@ -30,7 +30,7 @@ enum FarmArea: String, CaseIterable, Identifiable {
 
 // Temporary vector art; concept identifiers are not bundled image assets.
 final class FarmScene: SKScene {
-    init() {
+    override init() {
         super.init(size: CGSize(width: 1200, height: 800))
         scaleMode = .resizeFill
         backgroundColor = UIColor(red: 0.78, green: 0.9, blue: 0.69, alpha: 1)
