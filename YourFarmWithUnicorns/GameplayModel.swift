@@ -199,6 +199,23 @@ struct ChoreGame {
         completed = false; progress = 0
     }
 }
+struct ChoreEntry {
+    private var states: [FarmActivity: ChoreGame] = [:]
+    let brokenFence: Bool
+    var current: ChoreGame
+    init(activity: FarmActivity, tack: Tack = Tack(), brokenFence: Bool = true) {
+        self.brokenFence = brokenFence
+        current = ChoreGame(activity: activity, tack: tack, brokenFence: brokenFence)
+    }
+    mutating func select(_ activity: FarmActivity, tack: Tack) {
+        states[current.activity] = current
+        if var saved = states[activity], !saved.completed {
+            saved.tack = tack; current = saved
+        } else {
+            current = ChoreGame(activity: activity, tack: tack, brokenFence: brokenFence)
+        }
+    }
+}
 struct UnicornAppearance {
     let sourceHorseID: String
     let size: HorseSize

@@ -2,7 +2,11 @@ import SpriteKit
 
 final class TaskScene: SKScene {
     var onChange: ((ChoreGame, Bool) -> Void)?
-    private(set) var game: ChoreGame
+    private var entry: ChoreEntry
+    private(set) var game: ChoreGame {
+        get { entry.current }
+        set { entry.current = newValue }
+    }
     private var player: Player
     private var horse: HorseNode
     private let world = SKNode()
@@ -43,7 +47,7 @@ final class TaskScene: SKScene {
     init(player: Player, activity: FarmActivity) {
         self.player = player; horse = HorseNode(player: player, mounted: false)
         let brokenFence = Bool.random(); entryBrokenFence = brokenFence
-        game = ChoreGame(activity: activity, tack: player.tack, brokenFence: brokenFence)
+        entry = ChoreEntry(activity: activity, tack: player.tack, brokenFence: brokenFence)
         super.init(size: CGSize(width: 1000, height: 580))
         scaleMode = .aspectFit
         backgroundColor = UIColor(red: 0.93, green: 0.85, blue: 0.64, alpha: 1)
@@ -51,7 +55,7 @@ final class TaskScene: SKScene {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
     override func didMove(to view: SKView) { addChild(world); render(); demonstrate() }
     func choose(_ activity: FarmActivity) {
-        game = ChoreGame(activity: activity, tack: player.tack, brokenFence: entryBrokenFence)
+        entry.select(activity, tack: player.tack)
         reportedCompletion = false; dragging = nil; dragPosition = nil; lastDrag = nil
         render(); demonstrate(); notify()
     }

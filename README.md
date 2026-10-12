@@ -10,7 +10,7 @@ The game is ready for build and device testing, not a finished App Store release
 2. In Finder open **YourFarmWithUnicorns.xcodeproj** inside that folder. Open this file specifically; opening the whole folder or `Package.swift` opens the core test library instead of the app.
 3. Select the shared **YourFarmWithUnicorns** scheme and a **named iPad simulator**, then press **⌘R**. Simulator builds do not need a signing team.
 4. Keep the existing app installed in the simulator if you want to retain its child saves. The bundle identifier and save format are unchanged.
-5. Press **⌘U** for the 31 model tests and one UI smoke test. Run the UI test in a fresh simulator: it intentionally checks first-launch setup and creates a test child. Existing personal saves are not erased by the test code.
+5. Press **⌘U** for the 32 model tests and one UI smoke test. Run the UI test in a fresh simulator: it intentionally checks first-launch setup and creates a test child. Existing personal saves are not erased by the test code.
 
 Requires Xcode 15+ and an installed iOS simulator runtime. Real iPad installation needs your own signing team and unique bundle identifier.
 
@@ -31,7 +31,7 @@ xcodebuild test -project YourFarmWithUnicorns.xcodeproj -scheme YourFarmWithUnic
 | Round yard | Automatic riding, Walk/Trot/Canter, gentle direction reversal, and ground poles. Complete whole circuits. |
 | Farmhouse | After three ribbons, search one of six daily hiding spots for the wand, guided by sparkles. |
 
-Large activity buttons choose a task. A brief moving-hand demonstration and glowing targets guide touch/drag play; no reading or voice-over is required to perform the gestures. Tasks are freely replayable, and scene-entry state resets when leaving/re-entering without erasing the child's daily progress. Food can be fed repeatedly directly from the tray. A fence can be sound on a particular entry; other paddock tasks remain available.
+Large activity buttons choose a task. A brief moving-hand demonstration and glowing targets guide touch/drag play; no reading or voice-over is required to perform the gestures. Tasks are freely replayable, and scene-entry state resets when leaving/re-entering without erasing the child's daily progress. Switching between unfinished activities within an area retains their partial progress. Food can be fed repeatedly directly from the tray. A fence can be sound on a particular entry; other paddock tasks remain available.
 
 ## Ribbons, wand and flight
 
@@ -53,7 +53,7 @@ Music and SFX toggles are independent and saved per child. Nine original synthes
 
 ## Validation and core tests
 
-The Linux cloud compiled and passed all **31 pure-Swift model tests**, parsed Apple-platform sources, and verified project source membership, shared scheme references, PNG integrity, and all 20 bundled audio resources. This does not resolve Apple SDK APIs or establish UI behavior. GitHub's macOS workflow builds the real app and runs model tests plus an iPad UI smoke test for launch, three stable chores, a ribbon, horse selection, all-area Home navigation, and saved relaunch behavior.
+The Linux cloud compiled and passed all **32 pure-Swift model tests**, parsed Apple-platform sources, and verified project source membership, shared scheme references, PNG integrity, and all 20 bundled audio resources. This does not resolve Apple SDK APIs or establish UI behavior. GitHub's macOS workflow builds the real app and runs model tests plus an iPad UI smoke test for launch, three stable chores, a ribbon, horse selection, all-area Home navigation, and saved relaunch behavior.
 
 ```sh
 bash scripts/setup-swift-core.sh  # Linux only, if compiler is missing

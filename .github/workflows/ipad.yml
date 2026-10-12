@@ -48,7 +48,7 @@ jobs:
           def count(name): return int(metrics.get(name, {}).get('_value', 0))
           total, failed, skipped = count('testsCount'), count('testsFailedCount'), count('testsSkippedCount')
           print(f'::notice::Native iPad tests: {total} executed, {failed} failed, {skipped} skipped.')
-          if total < 32 or failed or skipped:
+          if total < 33 or failed or skipped:
               raise SystemExit('Required native tests did not all execute successfully')
           PY
           fi

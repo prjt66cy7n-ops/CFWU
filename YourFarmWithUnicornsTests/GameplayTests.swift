@@ -133,6 +133,18 @@ final class GameplayTests: XCTestCase {
             game = ChoreGame(activity: activity); XCTAssertFalse(game.completed); XCTAssertEqual(game.progress, 0)
         }
     }
+    func testSwitchingActivitiesKeepsPartialEntryStateAndReentryResets() {
+        var entry = ChoreEntry(activity: .stableWater)
+        entry.current.dropAtTap(); entry.current.tapTarget()
+        entry.select(.feed, tack: Tack()); entry.current.dropAtDestination()
+        entry.select(.stableWater, tack: Tack())
+        XCTAssertTrue(entry.current.bucketFull); XCTAssertTrue(entry.current.bucketAtTap)
+        entry.current.dropAtDestination(); XCTAssertTrue(entry.current.completed)
+        entry.select(.stableWater, tack: Tack())
+        XCTAssertFalse(entry.current.bucketFull); XCTAssertFalse(entry.current.completed)
+        entry = ChoreEntry(activity: .stableWater)
+        XCTAssertFalse(entry.current.bucketFull); XCTAssertFalse(entry.current.bucketAtTap)
+    }
     func testAllThirteenUnicornsRetainSizeAndChosenPaletteAndHideTack() {
         for horse in HorseCatalog.all {
             var player = Player(name: "Child", rider: .girl, palette: .green); player.selectHorse(horse.id)
