@@ -8,8 +8,8 @@ let package = Package(
         .target(name: "YourFarmWithUnicorns", path: "YourFarmWithUnicorns",
                 exclude: ["Assets.xcassets", "Resources", "FarmController.swift", "FarmScene.swift", "FarmViews.swift",
                           "GameArt.swift", "GameAudio.swift", "HorseNode.swift", "RidingScene.swift", "RidingViews.swift",
-                          "StableViews.swift", "YourFarmWithUnicornsApp.swift"],
-                sources: ["GameModel.swift", "HorseCatalog.swift", "RidingModel.swift"]),
+                          "StableViews.swift", "TaskScene.swift", "TaskViews.swift", "FlightScene.swift", "YourFarmWithUnicornsApp.swift"],
+                sources: ["GameModel.swift", "HorseCatalog.swift", "RidingModel.swift", "GameplayModel.swift"]),
         .testTarget(name: "YourFarmWithUnicornsTests", dependencies: ["YourFarmWithUnicorns"], path: "YourFarmWithUnicornsTests")
     ]
 )

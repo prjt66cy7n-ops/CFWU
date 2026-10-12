@@ -4,10 +4,11 @@ import SpriteKit
 struct RidingScreen: View {
     @StateObject private var session: RidingSession
     @Environment(\.scenePhase) private var phase
+    let player: Player
     let mode: RidingScene.Mode
     let paused: Bool
     init(player: Player, mode: RidingScene.Mode, paused: Bool, onActivity: @escaping (String) -> Void) {
-        self.mode = mode; self.paused = paused
+        self.player = player; self.mode = mode; self.paused = paused
         _session = StateObject(wrappedValue: RidingSession(player: player, mode: mode, onActivity: onActivity))
     }
     var body: some View {
@@ -56,6 +57,7 @@ struct RidingScreen: View {
         }
         .onAppear { updatePause() }
         .onDisappear { session.scene.pause() }
+        .onChange(of: player.sfxEnabled) { session.scene.soundEnabled = $0 }
         .onChange(of: paused) { _ in updatePause() }
         .onChange(of: phase) { _ in updatePause() }
     }

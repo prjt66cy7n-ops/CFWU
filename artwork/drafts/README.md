@@ -1,6 +1,6 @@
 # Draft artwork gallery
 
-These are generated artwork sources for **Your Farm With Unicorns**, not finished animation atlases. Stage 2 bundles the horse portrait, rider palette and tack palette sheets for static UI previews; remaining sheets are production sources only. No further art approval is required; continue processing and production in the agreed visual style.
+These are generated artwork sources for **Your Farm With Unicorns**, not finished animation atlases. The gameplay prototype bundles portraits, rider and tack palettes, care/coop props, scenery props, magic props and farmhouse furniture. Remaining sheets are production references only; none are finished animation atlases. No further art approval is required; continue processing and production in the agreed visual style.
 
 The original care-and-tack sheet was approved as the style direction. All new PNGs have alpha transparency, confirmed by reading their channels. Some preview tools display colors stored under fully transparent pixels; those colors are not visible during correct alpha compositing.
 
@@ -59,3 +59,7 @@ The sheets were generated from written art descriptions. They do not reconstruct
 ## Thirteen provisional horse portraits
 
 ![Thirteen provisional horse portraits](horse-portrait-reference-sheet.png)
+
+## Farmhouse wand-search furniture
+
+![Farmhouse search furniture](farmhouse-search-sheet.png)

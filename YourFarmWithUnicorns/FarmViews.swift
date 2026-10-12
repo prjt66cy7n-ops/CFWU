@@ -3,76 +3,46 @@ import SpriteKit
 
 struct FarmRootView: View {
     @EnvironmentObject private var game: FarmController
+    @Environment(\.scenePhase) private var phase
     @State private var area: FarmArea?
+    @State private var flying = false
     @State private var players = false
     @State private var editing = false
     @State private var settings = false
     @State private var choosingHorse = false
-    @State private var scene = FarmScene()
-    private let dayTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
+    @State private var launchingWand = false
+    @State private var celebrationFly = false
+    @State private var map = FarmScene()
+    private let dayTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    private var paused: Bool { settings || players || editing || choosingHorse || launchingWand || game.message != nil }
+    private var audioScene: String { flying ? "flight" : (area?.rawValue ?? "farm") }
     var body: some View {
-        Group {
-            if game.active == nil {
+        ZStack {
+            Color(red: 0.84, green: 0.92, blue: 0.73).ignoresSafeArea()
+            if let player = game.active {
+                VStack(spacing: 8) {
+                    header(player)
+                    RibbonRow(player: player)
+                    playArea(player)
+                    Text("Draft artwork · Your Farm With Unicorns").font(.caption2).foregroundColor(.secondary)
+                }.padding(16)
+            } else {
                 CharacterEditor(player: nil) { name, rider, palette in game.create(name: name, rider: rider, palette: palette) }
                     .disabled(game.storageBlocked)
-            } else {
-                ZStack {
-                    SpriteView(scene: scene).ignoresSafeArea()
-                    VStack(spacing: 12) {
-                        HStack {
-                            if area != nil {
-                                Button { game.save(); area = nil } label: { Label("Home", systemImage: "house.fill") }
-                            } else {
-                                Button { players = true } label: { Label("Switch / Add Player", systemImage: "person.2.fill") }
-                            }
-                            Spacer()
-                            Text("\(game.active!.name)’s Farm").font(.title.bold()).lineLimit(1).minimumScaleFactor(0.4)
-                            Spacer()
-                            Button { settings = true } label: { Image(systemName: "gearshape.fill").accessibilityLabel("Sound settings") }
-                        }
-                        .padding().background(.regularMaterial).clipShape(RoundedRectangle(cornerRadius: 20))
-                        if let area {
-                            if area == .arena || area == .roundYard {
-                                RidingScreen(player: game.active!, mode: area == .arena ? .arena : .roundYard,
-                                             paused: settings || players || editing || choosingHorse) { activity in
-                                    game.recordActivity(area: area.rawValue, activity: activity)
-                                    GameAudio.chime(enabled: game.active?.sfxEnabled ?? false)
-                                }.id("\(game.active!.id)-\(area.rawValue)")
-                            } else if area == .stables {
-                                StableScreen { choosingHorse = true }
-                            } else if area == .washBay {
-                                TackScreen { editing = true }
-                            } else {
-                                activity(area)
-                            }
-                        } else {
-                            Text("Your Farm With Unicorns").font(.title2.bold())
-                            Text("Tap a place to visit").font(.headline)
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 4), spacing: 16) {
-                                ForEach(FarmArea.allCases) { place in
-                                    Button { game.refreshDay(); area = place } label: {
-                                        VStack { Text(place.icon).font(.system(size: 48)); Text(place.title).font(.headline) }
-                                            .frame(maxWidth: .infinity, minHeight: 115)
-                                            .background(.regularMaterial).clipShape(RoundedRectangle(cornerRadius: 22))
-                                    }
-                                }
-                            }
-                            Text("TEMPORARY MAP ART · Wash bay is the stable verandah").font(.caption)
-                            HStack {
-                                HorsePortrait(horse: game.active!.horse).frame(width: 52, height: 52)
-                                Text("\(game.active!.horse.name) · \(game.active!.palette.label)")
-                                Spacer()
-                                Text("Daily ribbons: \(game.active!.ribbons.count) · Rewards arrive in Stage 4")
-                            }.font(.caption)
-                        }
-                        Spacer(minLength: 0)
-                    }.padding(24)
-                }
+            }
+            if let reward = game.reward {
+                RosetteCelebration(area: reward.area)
+                    .scaleEffect(celebrationFly ? 0.18 : 1)
+                    .offset(x: celebrationFly ? -260 : 0, y: celebrationFly ? -220 : 0)
+                    .opacity(celebrationFly ? 0 : 1).allowsHitTesting(false)
             }
         }
         .buttonStyle(.borderedProminent).tint(.brown)
-        .sheet(isPresented: $players) { PlayerPicker { players = false; area = nil } }
+        .sheet(isPresented: $players) { PlayerPicker { players = false; home() } }
         .sheet(isPresented: $choosingHorse) { HorsePicker { choosingHorse = false } }
+        .sheet(isPresented: $launchingWand) {
+            if let player = game.active { WandLaunchScreen(player: player) { launchingWand = false; beginFlight() } }
+        }
         .sheet(isPresented: $editing) {
             CharacterEditor(player: game.active) { name, rider, palette in
                 game.edit(name: name, rider: rider, palette: palette); editing = false
@@ -82,33 +52,96 @@ struct FarmRootView: View {
             NavigationStack {
                 Form {
                     Toggle("Music", isOn: Binding(get: { game.active?.musicEnabled ?? true }, set: { value in game.update { $0.musicEnabled = value } }))
-                    Toggle("Sound effects", isOn: Binding(get: { game.active?.sfxEnabled ?? true }, set: { value in game.update { $0.sfxEnabled = value }; if !value { GameAudio.stopEffects() } }))
-                    Text("Preferences save per player. Course and circuit chimes follow Sound Effects. Background music will be added with later assets.")
+                    Toggle("Sound Effects", isOn: Binding(get: { game.active?.sfxEnabled ?? true }, set: { value in
+                        game.update { $0.sfxEnabled = value }; if !value { GameAudio.stopEffects() }
+                    }))
                 }.navigationTitle("Sound").toolbar { Button("Done") { settings = false } }
             }
         }
         .alert("Saved game", isPresented: Binding(get: { game.message != nil }, set: { if !$0 { game.message = nil } })) {
             Button("OK") { game.message = nil }
         } message: { Text(game.message ?? "") }
-        .onReceive(dayTimer) { _ in game.refreshDay() }
+        .onReceive(dayTimer) { _ in if phase == .active { game.refreshDay() } }
+        .onAppear { syncAudio() }
+        .onChange(of: area) { _ in syncAudio() }
+        .onChange(of: flying) { _ in syncAudio() }
+        .onChange(of: phase) { _ in syncAudio() }
+        .onChange(of: game.active?.musicEnabled) { _ in syncAudio() }
+        .onChange(of: game.active?.id) { _ in syncAudio() }
+        .onChange(of: game.active?.name) { name in map.updateName(name ?? "Your") }
+        .task(id: game.reward?.id) {
+            guard let reward = game.reward else { return }
+            celebrationFly = false
+            GameAudio.effect("ribbon", enabled: game.active?.sfxEnabled ?? false)
+            try? await Task.sleep(nanoseconds: 1_100_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeInOut(duration: 0.6)) { celebrationFly = true }
+            try? await Task.sleep(nanoseconds: 650_000_000)
+            guard !Task.isCancelled else { return }
+            game.clearReward(reward.id)
+        }
     }
-    private func activity(_ place: FarmArea) -> some View {
-        VStack(spacing: 20) {
-            Text(place.icon).font(.system(size: 84))
-            Text(place.title).font(.largeTitle.bold())
-            Text("TEMPORARY SCENE · Activities coming in later stages").font(.headline)
-            HStack {
-                RiderPortrait(rider: game.active!.rider, palette: game.active!.palette).frame(width: 90, height: 140)
-                HorsePortrait(horse: game.active!.horse).frame(width: 180, height: 140)
-            }.padding().background(game.active!.palette.color.opacity(0.15)).clipShape(RoundedRectangle(cornerRadius: 24))
-            Text(game.active!.horse.name).font(.title2.bold())
-            Text("Outfit: \(game.active!.palette.label)")
-            if place == .washBay {
-                Button { editing = true } label: { Label("Edit Character", systemImage: "person.crop.circle") }
+    private func header(_ player: Player) -> some View {
+        HStack {
+            if area != nil || flying {
+                Button(action: home) { Label("Home", systemImage: "house.fill").padding(.vertical, 5) }.accessibilityIdentifier("home")
+            } else {
+                Button { players = true } label: { Label("Switch / Add Player", systemImage: "person.2.fill").padding(.vertical, 5) }
             }
-            if place == .farmhouse { Text("🚙 White Tesla Model Y · placeholder").font(.caption) }
-        }.frame(maxWidth: .infinity, maxHeight: .infinity).padding()
-            .background(.regularMaterial).clipShape(RoundedRectangle(cornerRadius: 28))
+            Spacer()
+            Text("\(player.name)’s Farm").font(.title2.bold()).lineLimit(1).minimumScaleFactor(0.35)
+            Spacer()
+            Button { settings = true } label: { Image(systemName: "gearshape.fill").font(.title2).padding(5) }.accessibilityLabel("Sound settings")
+        }.padding(10).background(.regularMaterial).clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+    @ViewBuilder private func playArea(_ player: Player) -> some View {
+        if flying {
+            FlightScreen(player: player, paused: paused, finish: home).id(player.id)
+        } else if let area {
+            if area == .arena || area == .roundYard {
+                RidingScreen(player: player, mode: area == .arena ? .arena : .roundYard, paused: paused) { activity in
+                    game.recordActivity(area: area.rawValue, activity: activity)
+                    GameAudio.chime(enabled: game.active?.sfxEnabled ?? false)
+                }.id("\(player.id)-\(area.rawValue)")
+            } else if area == .farmhouse {
+                FarmhouseScreen(player: player) { game.discoverWand(at: $0) }
+            } else {
+                FarmTasksScreen(player: player, area: area, paused: paused,
+                                chooseHorse: { choosingHorse = true }, editCharacter: { editing = true },
+                                choosePalette: { palette in game.update { $0.palette = palette } },
+                                wand: { launchingWand = true },
+                                onActivity: { game.recordActivity(area: area.rawValue, activity: $0) },
+                                onTack: { tack in if game.active?.tack != tack { game.update { $0.tack = tack } } })
+                    .id("\(player.id)-\(area.rawValue)")
+            }
+        } else {
+            VStack(spacing: 7) {
+                Text("Tap a place to visit").font(.headline)
+                SpriteView(scene: map).clipShape(RoundedRectangle(cornerRadius: 24))
+                    .onAppear {
+                        map.updateName(player.name)
+                        map.onVisit = { place in game.refreshDay(); area = place }
+                    }.accessibilityLabel("Farm map")
+                HStack(spacing: 6) {
+                    ForEach(FarmArea.allCases) { place in
+                        Button { game.refreshDay(); area = place } label: {
+                            Text(place.icon).font(.title2).frame(maxWidth: .infinity, minHeight: 38)
+                        }.accessibilityLabel(place.title).accessibilityIdentifier("visit-\(place.rawValue)")
+                    }
+                }
+                Text("\(player.horse.name) · \(player.palette.label)").font(.caption)
+            }
+        }
+    }
+    private func home() { game.save(); flying = false; area = nil }
+    private func beginFlight() {
+        game.refreshDay()
+        guard game.active?.canFly == true else { return }
+        game.save(); flying = true
+    }
+    private func syncAudio() {
+        GameAudio.music(scene: audioScene, enabled: (game.active?.musicEnabled ?? false) && phase == .active)
+        if phase != .active { GameAudio.stopEffects() }
     }
 }
 
@@ -118,6 +151,7 @@ struct CharacterEditor: View {
     @State private var name: String
     @State private var rider: Rider
     @State private var palette: Palette
+    @FocusState private var nameFocused: Bool
     init(player: Player?, submit: @escaping (String, Rider, Palette) -> Void) {
         self.player = player; self.submit = submit
         _name = State(initialValue: player?.name ?? "")
@@ -125,10 +159,12 @@ struct CharacterEditor: View {
         _palette = State(initialValue: player?.palette ?? .pink)
     }
     var body: some View {
+        ScrollView {
         VStack(spacing: 20) {
             Text(player == nil ? "Welcome to Your Farm With Unicorns" : "Edit Character").font(.title.bold())
             TextField("Your name", text: $name).textFieldStyle(.roundedBorder).font(.title2)
                 .autocorrectionDisabled().submitLabel(.done)
+                .focused($nameFocused).onSubmit { nameFocused = false }.accessibilityIdentifier("player-name")
             Picker("Rider", selection: $rider) {
                 Text("👦 Boy").tag(Rider.boy); Text("👧 Girl").tag(Rider.girl)
             }.pickerStyle(.segmented)
@@ -145,11 +181,11 @@ struct CharacterEditor: View {
             }
             RiderPortrait(rider: rider, palette: palette).frame(height: 130)
             Text("Draft rider artwork").font(.caption)
-            Button(player == nil ? "🏡 Go to my farm" : "Save Character") { submit(name, rider, palette) }
-                .buttonStyle(.borderedProminent).controlSize(.large)
+            Button(player == nil ? "🏡 Go to my farm" : "Save Character") { nameFocused = false; submit(name, rider, palette) }
+                .buttonStyle(.borderedProminent).controlSize(.large).accessibilityIdentifier("save-character")
                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-        }.padding(32).frame(maxWidth: 760).frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(red: 0.95, green: 0.96, blue: 0.88))
+        }.padding(32).frame(maxWidth: 760).frame(maxWidth: .infinity)
+        }.background(Color(red: 0.95, green: 0.96, blue: 0.88))
     }
 }
 

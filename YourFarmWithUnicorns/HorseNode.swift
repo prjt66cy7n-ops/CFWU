@@ -15,7 +15,10 @@ final class HorseNode: SKNode {
     private let ponyScale: CGFloat
     private var lastDirection = 0.0
     private var firstDirection = true
-    init(player: Player) {
+    private var wings: [SKShapeNode] = []
+    private var tailNode: SKShapeNode?
+    private var headNode: SKShapeNode?
+    init(player: Player, mounted: Bool = true, unicorn: Bool = false) {
         ponyScale = CGFloat(player.horse.size.scale)
         super.init()
         shadow.fillColor = .black.withAlphaComponent(0.13); shadow.strokeColor = .clear
@@ -36,14 +39,15 @@ final class HorseNode: SKNode {
             leg.position = location; leg.fillColor = .darkGray; leg.strokeColor = .clear
             if player.horse.id == "roo" && index == 2 { leg.fillColor = .white }
             if player.horse.size == .draft { leg.fillColor = .white }
+            if unicorn { leg.fillColor = player.horse.id == "roo" && index == 2 ? UIColor.systemBrown.withAlphaComponent(0.45) : .white }
             legs.append(leg); figure.addChild(leg)
         }
         let tail = SKShapeNode(rectOf: CGSize(width: 10, height: 28), cornerRadius: 5)
-        tail.position.y = -34; tail.fillColor = .darkGray; tail.strokeColor = .clear; figure.addChild(tail)
+        tail.position.y = -34; tail.fillColor = unicorn ? player.palette.uiColor : .darkGray; tail.strokeColor = .clear; figure.addChild(tail); tailNode = tail
         let body = SKShapeNode(ellipseOf: CGSize(width: 31, height: 54))
-        body.fillColor = coat; body.strokeColor = coat.withAlphaComponent(0.8); figure.addChild(body)
+        body.fillColor = unicorn ? .white : coat; body.strokeColor = coat.withAlphaComponent(0.8); figure.addChild(body)
         if [.paint, .piebald].contains(player.horse.coat) {
-            let patch = SKShapeNode(ellipseOf: CGSize(width: 17, height: 25)); patch.fillColor = .white
+            let patch = SKShapeNode(ellipseOf: CGSize(width: 17, height: 25)); patch.fillColor = unicorn ? .lightGray : .white
             patch.strokeColor = .clear; patch.position = CGPoint(x: 4, y: -8); figure.addChild(patch)
         }
         if [.dapple, .appaloosa].contains(player.horse.coat) {
@@ -54,38 +58,64 @@ final class HorseNode: SKNode {
             }
         }
         let head = SKShapeNode(ellipseOf: CGSize(width: 21, height: 30))
-        head.position.y = 34; head.fillColor = coat; head.strokeColor = .brown; figure.addChild(head)
+        head.position.y = 34; head.fillColor = unicorn ? .white : coat; head.strokeColor = .brown; figure.addChild(head); headNode = head
         for x in [-8.0, 8.0] {
             let ear = SKShapeNode(ellipseOf: CGSize(width: 6, height: 12)); ear.position = CGPoint(x: x, y: 49)
-            ear.fillColor = coat; ear.strokeColor = .brown; figure.addChild(ear)
+            ear.fillColor = unicorn ? .white : coat; ear.strokeColor = .brown; figure.addChild(ear)
         }
         let mane = SKShapeNode(rectOf: CGSize(width: 7, height: 35), cornerRadius: 3)
         mane.position = CGPoint(x: -7, y: 23)
-        mane.fillColor = [.palomino, .white, .chestnut, .fawn].contains(player.horse.coat) ? .systemYellow : .darkGray
+        mane.fillColor = unicorn ? player.palette.uiColor : ([.palomino, .white, .chestnut, .fawn].contains(player.horse.coat) ? .systemYellow : .darkGray)
         mane.strokeColor = .clear; figure.addChild(mane)
         if player.horse.id == "roo" {
             let path = CGMutablePath(); path.move(to: CGPoint(x: 0, y: 4)); path.addLine(to: CGPoint(x: 3, y: 0))
             path.addLine(to: CGPoint(x: 0, y: -4)); path.addLine(to: CGPoint(x: -3, y: 0)); path.closeSubpath()
             let marking = SKShapeNode(path: path); marking.position.y = 39
-            marking.fillColor = .white; marking.strokeColor = .clear; figure.addChild(marking)
+            marking.fillColor = unicorn ? .brown : .white; marking.strokeColor = .clear; figure.addChild(marking)
         }
         pad.fillColor = player.palette.uiColor; pad.strokeColor = player.palette == .blackGold ? .systemYellow : .white
-        pad.isHidden = !player.tack.saddlePad; figure.addChild(pad)
-        saddle.fillColor = .brown; saddle.strokeColor = .darkGray; saddle.isHidden = !player.tack.saddle
+        pad.isHidden = unicorn || !player.tack.saddlePad; figure.addChild(pad)
+        saddle.fillColor = .brown; saddle.strokeColor = .darkGray; saddle.isHidden = unicorn || !player.tack.saddle
         figure.addChild(saddle)
         bridle.position.y = 39; bridle.fillColor = player.palette.uiColor; bridle.strokeColor = .clear
-        bridle.isHidden = !player.tack.bridle; figure.addChild(bridle)
+        bridle.isHidden = unicorn || !player.tack.bridle; figure.addChild(bridle)
         riderBody.fillColor = player.palette.uiColor; riderBody.strokeColor = .white
         riderBody.position.y = 4; figure.addChild(riderBody)
         riderHead.position.y = 11; riderHead.fillColor = player.palette.uiColor; riderHead.strokeColor = .darkGray
         figure.addChild(riderHead)
-        if player.rider == .girl {
+        if mounted && player.rider == .girl {
             let hair = SKShapeNode(ellipseOf: CGSize(width: 5, height: 15)); hair.fillColor = .brown
             hair.strokeColor = .clear; hair.position = CGPoint(x: 8, y: 4); figure.addChild(hair)
+        }
+        riderBody.isHidden = !mounted; riderHead.isHidden = !mounted
+        if unicorn {
+            let hornPath = CGMutablePath(); hornPath.move(to: CGPoint(x: -3, y: 46))
+            hornPath.addLine(to: CGPoint(x: 0, y: 69)); hornPath.addLine(to: CGPoint(x: 5, y: 46)); hornPath.closeSubpath()
+            let horn = SKShapeNode(path: hornPath); horn.fillColor = .systemYellow; horn.strokeColor = .brown; figure.addChild(horn)
+            for side in [-1.0, 1.0] {
+                let path = CGMutablePath(); path.move(to: CGPoint(x: side * 10, y: 5))
+                path.addQuadCurve(to: CGPoint(x: side * 70, y: 25), control: CGPoint(x: side * 48, y: 48))
+                path.addLine(to: CGPoint(x: side * 63, y: 10)); path.addLine(to: CGPoint(x: side * 55, y: 12))
+                path.addLine(to: CGPoint(x: side * 45, y: -8)); path.addLine(to: CGPoint(x: side * 35, y: 1))
+                path.addQuadCurve(to: CGPoint(x: side * 10, y: 5), control: CGPoint(x: side * 20, y: -10)); path.closeSubpath()
+                let wing = SKShapeNode(path: path); wing.fillColor = .white; wing.strokeColor = .lightGray; wing.lineWidth = 1.5
+                wing.zPosition = -0.1; figure.addChild(wing); wings.append(wing)
+            }
         }
         setScale(ponyScale)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+    func eat() {
+        headNode?.run(.repeat(.sequence([.moveBy(x: 0, y: -3, duration: 0.2), .moveBy(x: 0, y: 3, duration: 0.2)]), count: 4))
+    }
+    func flickTail() {
+        tailNode?.run(.sequence([.rotate(toAngle: 0.5, duration: 0.15), .rotate(toAngle: -0.3, duration: 0.15), .rotate(toAngle: 0, duration: 0.2)]))
+    }
+    func flightMotion(time: Double) {
+        let gliding = Int(time) % 9 >= 6
+        let stretch = gliding ? 0.78 : 0.65 + 0.3 * sin(time * 3.5)
+        for wing in wings { wing.yScale = CGFloat(stretch) }
+    }
     func render(point: RidePoint, facing: RideFacing, gait: RideGait, moving: Bool, time: Double, jumpHeight: Double) {
         position = CGPoint(x: point.x, y: point.y)
         let target = Double(facing.rawValue) * .pi / 4 - .pi / 2

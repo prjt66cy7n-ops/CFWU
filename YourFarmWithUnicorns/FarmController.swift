@@ -4,6 +4,8 @@ import SwiftUI
     @Published private(set) var farm = SavedFarm()
     @Published var message: String?
     @Published var storageBlocked = false
+    struct Reward: Identifiable { let id = UUID(); let area: FarmArea }
+    @Published var reward: Reward?
     private let store: SaveStore
     var active: Player? { farm.players.first { $0.id == farm.activeProfileID } }
     init(store: SaveStore? = nil) {
@@ -24,11 +26,13 @@ import SwiftUI
     func create(name: String, rider: Rider, palette: Palette) {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, !storageBlocked else { return }
+        reward = nil
         var player = Player(name: name, rider: rider, palette: palette)
         player.refreshDay(); farm.players.append(player); farm.activeProfileID = player.id; save()
     }
     func switchPlayer(_ id: UUID) {
         guard farm.players.contains(where: { $0.id == id }) else { return }
+        reward = nil
         save(); farm.activeProfileID = id; refreshDay(); save()
     }
     func edit(name: String, rider: Rider, palette: Palette) {
@@ -42,14 +46,27 @@ import SwiftUI
     }
     func selectHorse(_ id: String) { update { $0.selectHorse(id) } }
     func recordActivity(area: String, activity: String) {
+        guard let area = FarmArea(rawValue: area) else { return }
         refreshDay()
-        guard active?.completedActivities[area]?.contains(activity) != true else { return }
-        update { $0.completedActivities[area, default: []].insert(activity) }
+        var awarded = false
+        update { awarded = $0.completeActivity(area: area, activity: activity) }
+        if awarded { reward = Reward(area: area) }
     }
+    func discoverWand(at spot: Int) {
+        refreshDay()
+        update { _ = $0.discoverWand(at: spot) }
+    }
+    func clearReward(_ id: UUID) { if reward?.id == id { reward = nil } }
     func refreshDay() {
         let previousPlayers = farm.players
         let previousActive = farm.activeProfileID
-        for index in farm.players.indices { farm.players[index].refreshDay() }
+        for index in farm.players.indices {
+            farm.players[index].refreshDay()
+            for area in FarmArea.ribbonAreas {
+                let saved = farm.players[index].completedActivities[area.rawValue, default: []]
+                if saved.intersection(area.activityIDs).count >= 3 { farm.players[index].ribbons.insert(area.rawValue) }
+            }
+        }
         if farm.activeProfileID == nil { farm.activeProfileID = farm.players.first?.id }
         if farm.players != previousPlayers || farm.activeProfileID != previousActive { save() }
     }

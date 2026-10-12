@@ -1,66 +1,82 @@
 # Your Farm With Unicorns
 
-Stage 2 source prototype of an offline, landscape-only iPad game. SwiftUI provides large touch controls and profile screens; SpriteKit renders the farm and riding areas. No third-party app dependencies, accounts or gameplay network calls.
+A complete **v1 gameplay prototype** for an offline, landscape-only iPad farm game, with independent local child profiles. All seven farm areas, daily ribbons, the wand search, and a winged-unicorn flight are implemented. The app uses SwiftUI + SpriteKit with no third-party app dependencies or gameplay network calls.
 
-## Try the updated project on your Mac
+The game is ready for build and device testing, not a finished App Store release: scenery and animal animation are still draft artwork. Original concept illustrations remain visual references rather than runtime animation assets. Twelve horse names are provisional. Native build and smoke-test results are available under the repository's **Actions → iPad build and smoke test** workflow; do not assume a green result until the workflow finishes.
 
-1. Close the older project in Xcode. Download the latest ZIP from the repository's **Code → Download ZIP** menu and unzip into a new folder.
-2. Open the new `YourFarmWithUnicorns.xcodeproj`, not the older downloaded copy.
-3. Select the shared **YourFarmWithUnicorns** scheme and a named **iPad simulator** (not My Mac or Any iOS Simulator).
-4. Press **⌘R**. Simulator builds do not need a signing team. Do not delete the app from the simulator if you want to keep existing player saves; this version uses the same bundle identifier and save format.
-5. Press **⌘U** to run the 15 model tests in Xcode.
+## Open the app on your Mac
 
-Requires a Mac with Xcode 15+ and an installed iOS simulator runtime. A physical iPad requires your own signing team and unique bundle identifier.
+1. Close the previous project in Xcode. On GitHub choose **Code → Download ZIP**, then unzip into a new folder.
+2. In Finder open **YourFarmWithUnicorns.xcodeproj** inside that folder. Open this file specifically; opening the whole folder or `Package.swift` opens the core test library instead of the app.
+3. Select the shared **YourFarmWithUnicorns** scheme and a **named iPad simulator**, then press **⌘R**. Simulator builds do not need a signing team.
+4. Keep the existing app installed in the simulator if you want to retain its child saves. The bundle identifier and save format are unchanged.
+5. Press **⌘U** for the 31 model tests and one UI smoke test. Run the UI test in a fresh simulator: it intentionally checks first-launch setup and creates a test child. Existing personal saves are not erased by the test code.
+
+Requires Xcode 15+ and an installed iOS simulator runtime. Real iPad installation needs your own signing team and unique bundle identifier.
 
 ```sh
 xcodebuild -project YourFarmWithUnicorns.xcodeproj -scheme YourFarmWithUnicorns -showdestinations
-xcodebuild -project YourFarmWithUnicorns.xcodeproj -scheme YourFarmWithUnicorns -destination 'platform=iOS Simulator,id=YOUR_IPAD_SIMULATOR_UUID' -derivedDataPath DerivedData build test
+xcodebuild test -project YourFarmWithUnicorns.xcodeproj -scheme YourFarmWithUnicorns -destination 'platform=iOS Simulator,id=YOUR_IPAD_SIMULATOR_UUID' -derivedDataPath DerivedData
 ```
 
-## What Stage 2 adds
+## What you can play
 
-- Exactly 13 horses selectable **only at stables**, with painted draft portraits. Roo is a bay mare, Daisy a Shetland and Bruno a larger Clydesdale. Selecting a horse transfers the profile's existing pad, saddle and bridle without changing its rider or outfit.
-- Six coordinated palettes, illustrated rider previews, and optional tack toggles at the wash bay. All horses can be ridden immediately without grooming or tack.
-- A fixed whole-arena view, directional joystick, independent Walk/Trot/Canter buttons, eight directional facings and temporary four-phase procedural gait animation.
-- Three similarly simple preset courses, all available immediately. Cross a jump at a suitable angle to jump automatically; yellow highlights and arrows guide the approach. Completing all three jumps gives a chime, sparkles and tick while riding continues.
-- Occasional harmless knocked poles and run-outs. Tap a fallen pole to replace it; retries are unlimited and there is no score or penalty.
-- Automatic round-yard riding with Walk/Trot/Canter, Change Direction and Ground Poles. Direction changes slow to a stop, reverse and resume the previous gait. A full circuit at one gait or over poles records that activity.
-- Riding pauses when settings open or the app becomes inactive. Home exits either riding scene immediately and stops the scene's input and updates.
+| Area | Activities |
+| --- | --- |
+| Stables | Drag carrots, apples, liquorice treats or hay to the horse; fill a bucket at the tap and deliver it; sweep the dirty floor. Choose any of 13 horses here. |
+| Wash bay | Brush the coat; lift and pick all four hooves; wet/sponge/rinse the coat; drag on pad, saddle and bridle, or tap equipped pieces to remove them. Choose six coordinated palettes and edit the child's name/rider. |
+| Paddocks | Tap and scoop five manure piles into a wheelbarrow; brush and refill a green trough; fill and deliver a bucket; drag in hay; hammer an occasionally broken fence rail. |
+| Chicken coop | Reveal eggs and drag them to a basket; scatter grain; hold the hose at the water dispenser; sweep; replace straw in four nests; give mealworms or vegetables. Tap chickens for a hop/cluck. |
+| Arena | Joystick plus Walk/Trot/Canter, eight facings, three freely available courses, automatic aligned jumps, playful detours/knockdowns, and tap-to-reset poles. |
+| Round yard | Automatic riding, Walk/Trot/Canter, gentle direction reversal, and ground poles. Complete whole circuits. |
+| Farmhouse | After three ribbons, search one of six daily hiding spots for the wand, guided by sparkles. |
 
-The simulator check for Stage 1 was reported as working by the user. **The Stage 2 iPad build, UI layout, audio playback and touch behavior have not yet been run here.** This Linux workspace compiled and passed all 15 pure-Swift model tests and parsed the app sources for Swift syntax. These checks do not resolve Apple SDK APIs or substitute for an Xcode build.
+Large activity buttons choose a task. A brief moving-hand demonstration and glowing targets guide touch/drag play; no reading or voice-over is required to perform the gestures. Tasks are freely replayable, and scene-entry state resets when leaving/re-entering without erasing the child's daily progress. Food can be fed repeatedly directly from the tray. A fence can be sound on a particular entry; other paddock tasks remain available.
 
-## Simulator checks for Stage 2
+## Ribbons, wand and flight
 
-1. At Stables choose Daisy, Bruno and Roo in turn. Confirm 13 choices and the correct selected name on the farm map. Horse selection should not appear in any other area.
-2. At Wash Bay turn on pad, saddle and bridle, select each palette, and edit rider/name. Revisit Stables, switch horse and enter Arena: tack and rider preferences should remain. Horses have different visual sizes but identical movement speeds and jump difficulty.
-3. In Arena drag the joystick in all eight directions. Release it to stop; switch among the three gaits. The entire course must stay visible without camera following.
-4. Ride across each highlighted jump following its arrows, rather than along the pole. A correct approach should trigger a hop automatically. Jump all three in any order to see the celebration, then choose another course or keep riding.
-5. Jump repeatedly until an occasional pole falls or the horse takes a small detour. Tap the fallen pole to reset it. There should be no failure dialog or penalty.
-6. In Round Yard select each gait, wait a full circuit, toggle Ground Poles, and change direction. The horse should slow, turn and resume the selected gait. Leave with Home at any point.
-7. Open Settings during a ride and confirm the horse pauses. Turn Sound Effects off and complete a course/circuit: visual feedback should still work without a chime. Background music is not supplied yet; its preference is retained for later integration.
-8. Switch children and relaunch the app. Each child's horse, tack, outfit and sound preferences should stay separate. Repeat with networking off, and check a small and a large landscape iPad.
+- Each participating area gives at most one red rosette per local calendar day after **three distinct activities**, in any order. Repeated foods count as one feeding activity; mealworms/vegetables count as one treat activity. Invalid activity IDs cannot award progress.
+- Arena's three preset courses count as its three distinct activities; round yard has walk, trot, canter and poles. The farmhouse itself does not award a ribbon.
+- After three ribbons, tap the sparkling hiding spot in the farmhouse. One discovery unlocks the reusable wand at stables for the rest of that day.
+- At stables tap the wand tray, then drag the wand onto the horse. Every horse can become a winged unicorn with a white base coat, retained identifying markings and size, and palette-matched mane/tail. It is ridden bareback with tack hidden.
+- Flight lasts about **38 seconds**, including transformation and finale, above the same draft farm layout as the map. Tap stars for rainbow trail, and hearts/butterflies/rings for optional effects. There is no steering, score or failure condition.
+- The finale says **“What a wonderful day!”** and returns to the map. Home exits immediately at any point. Flight appearance is temporary rendering state; it never overwrites the saved horse or tack, so normal appearance returns instantly.
+- The device's local date is checked during play, on scene changes and after app reactivation. At midnight ribbons, activity tracking and wand availability reset; rider, horse, tack and audio preferences remain. Flight pauses when the app is inactive.
 
-Arena course IDs and round-yard gait/pole activity IDs are saved per child and local day for Stage 4. This stage does not award ribbons or unlock the wand/flight. Re-entering a riding scene starts fresh course/circuit state without erasing daily activity history.
+## Profiles and audio
 
-## Core tests in this cloud workspace
+First launch requires a nonempty trimmed child name, rider and outfit selection. Later launches open the last-used child's map directly. Switch/Add Player lives on the map; Edit Character lives at the wash bay. Immutable UUIDs, not names, identify saves. Renaming immediately changes farm signs without merging or resetting progress.
 
-The model is also a small Swift package containing only Foundation-based persistence, horse catalog and riding simulation. It has no remote package dependencies.
+`Application Support/YourFarmWithUnicorns/profiles.json` is written atomically after changes. Corrupted saves are backed up before allowing a fresh start, and failed backups block overwriting. Stage 2's valid existing daily course/circuit completions can now award their corresponding rosettes.
+
+Music and SFX toggles are independent and saved per child. Nine original synthesized instrumental loops vary by area, including a brighter flight theme, with ten short synthetic feedback/animal sounds and the original completion chime. These are draft audio, not recorded animal sounds or a finished orchestral soundtrack. Effects are throttled and animal calls use varied, infrequent timings. Muted play retains visual feedback.
+
+## Validation and core tests
+
+The Linux cloud compiled and passed all **31 pure-Swift model tests**, parsed Apple-platform sources, and verified project source membership, shared scheme references, PNG integrity, and all 20 bundled audio resources. This does not resolve Apple SDK APIs or establish UI behavior. GitHub's macOS workflow builds the real app and runs model tests plus an iPad UI smoke test for launch, three stable chores, a ribbon, horse selection, all-area Home navigation, and saved relaunch behavior.
 
 ```sh
-bash scripts/setup-swift-core.sh   # Linux toolchain, when needed
-bash scripts/test-core.sh          # 15 tests plus syntax parsing of app sources
+bash scripts/setup-swift-core.sh  # Linux only, if compiler is missing
+bash scripts/test-core.sh
 ```
 
-The setup script uses Swift 6.0.3 from the official distribution and verifies its release signature against the Swift 6 release key from the official website repository before extraction. The signing key was valid at signing time; GPG now reports it as expired. The installed compiler is retained under `/workspace/toolchains`. Writable compiler/package caches are directed to temporary folders. On a Mac, `scripts/test-core.sh` uses the installed Swift compiler; Linux toolchain installation is unnecessary there.
+The pinned Swift 6.0.3 archive is signature-verified before extraction using the official Swift release-key bundle. The key was valid at signing time; GPG currently reports it as expired. Toolchain files persist under `/workspace/toolchains`; writable caches use temporary folders. On a Mac the test helper uses the installed Swift compiler. No cloud service needs starting, and no Git worktree is needed for these already isolated tasks.
 
-Tests exercise independent saves and renaming, corruption recovery, date rollover, horse/tack preservation, direction quantization, joystick bounds, aligned and parallel jump approaches, course completion, knockdown/reset/run-out behavior, round-yard circuit tracking, gait changes and reversal.
+## Full iPad QA checklist
 
-## Saves and artwork
+- Create two children, choose different horses/colours/tack/audio preferences, switch and relaunch. Rename a child without losing progress; test long names and small/large iPads.
+- Complete every task using touch and drag. Try incomplete buckets, partially cleaned troughs, unfinished hooves, unrevealed eggs and un-cleared nests; those must not count as completed.
+- Replay the same food/treat variants: no extra distinct-activity credit. Leave/re-enter to reset props; daily ribbons should remain.
+- Earn three activities in an area in different orders and verify one rosette; complete three areas, find the wand, and fly more than once.
+- Try flight with Roo, a Shetland and the Clydesdale, each palette and equipped tack. Check wings, bareback appearance, optional tap effects, finale, and both early Home and automatic return.
+- Cross a local midnight or change the simulator date: daily progress/wand should reset while other settings remain. Repeat after sleep or relaunch.
+- Switch each audio setting independently, pause the app, and try the whole loop with networking disabled.
+- Check touch target alignment, artwork edges, animation anchors, memory and frame rate on a real iPad before release.
 
-`Application Support/YourFarmWithUnicorns/profiles.json` stores an active profile UUID and independent player records via atomic writes. Names are editable labels rather than save keys. Unreadable saves are backed up before allowing a fresh profile; failed backups block overwriting. Daily rollover preserves horse, rider, tack and audio preferences.
+## Artwork and remaining release work
 
-Three generated draft sheets are bundled in `Assets.xcassets` for horse portraits, rider previews and tack swatches. `GameArt` renders their regions in memory and caches them; originals remain intact in `artwork/drafts`. They are not finished animation atlases. Riding uses clearly labelled temporary vector animation, including a Roo diamond and left hind sock. Final horse gait/jump exports, mounted rider poses and aligned tack overlays remain needed. Approved farm/scene concepts have not been redesigned or replaced.
+Nine generated PNG sheets are bundled for portrait/outfit/tack previews, care and coop props, scenery pieces, magic effects and farmhouse search furniture. `GameArt` renders atlas regions in memory; original sheets and provenance notes remain in `artwork/drafts`. Some silhouettes touch grid boundaries and still need production separation/edge cleanup.
 
-The initial concept lineup included 14 entries while the specification calls for 13. The provisional catalog keeps Roo and omits the second generic bay entry, Charlie. The other twelve names remain development placeholders. No code change is needed to replace the portraits with final assets later.
+The map and activity backgrounds, mounted horses/riders, gaits and wingbeats remain clearly labelled procedural drafts. Final scene layers and animation exports need integration using the approved concepts; exact approved pixels cannot be reconstructed from concept IDs. The white Model Y is still a labelled map placeholder. Licensed/finished music and animal recordings, app icon, release signing, accessibility tuning and device performance QA are outstanding.
 
-`course-chime.wav` is an original synthesized three-note feedback sound, bundled locally. Stage 3 adds touch/drag farm tasks; Stage 4 daily rewards and wand search; Stage 5 unicorn flight; Stage 6 final artwork and device QA. Lake swimming, hidden trail rides and pony club/horse float remain outside version 1.
+The concept lineup had 14 entries; the provisional 13-horse catalog omits the second generic bay, Charlie. The other twelve names remain placeholders. Lake swimming, hidden trail rides, pony club/horse float, accounts, purchases, advertising and online dependencies are outside v1.

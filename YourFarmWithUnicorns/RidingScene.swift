@@ -7,13 +7,16 @@ final class RidingScene: SKScene {
     var arena = ArenaRide()
     var yard = RoundYardRide()
     var joystick = RidePoint.zero
+    var soundEnabled: Bool
+    private var animalElapsed = 0.0
+    private var nextAnimal = Double.random(in: 12...24)
     var onProgress: ((Int, String?, [String]) -> Void)?
     private let horse: HorseNode
     private let obstacles = SKNode()
     private var lastTime: TimeInterval?
     private var animationTime = 0.0
     init(player: Player, mode: Mode) {
-        self.mode = mode; horse = HorseNode(player: player)
+        self.mode = mode; horse = HorseNode(player: player); soundEnabled = player.sfxEnabled
         super.init(size: CGSize(width: ArenaRide.width, height: ArenaRide.height))
         scaleMode = .aspectFit
         backgroundColor = UIColor(red: 0.71, green: 0.84, blue: 0.57, alpha: 1)
@@ -51,6 +54,11 @@ final class RidingScene: SKScene {
         guard let previous = lastTime else { lastTime = currentTime; return }
         lastTime = currentTime
         let dt = min(0.1, max(0, currentTime - previous)); animationTime += dt
+        animalElapsed += dt
+        if animalElapsed > nextAnimal {
+            animalElapsed = 0; nextAnimal = Double.random(in: 14...28)
+            GameAudio.effect("horse-\(Int.random(in: 1...3))", enabled: soundEnabled); horse.flickTail()
+        }
         if mode == .arena {
             let previousFallen = arena.fallenPoles
             let previousCompleted = arena.completedJumps

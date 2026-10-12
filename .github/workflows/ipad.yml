@@ -1,0 +1,46 @@
+name: iPad build and smoke test
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ipad-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ipad:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select an available iPad simulator
+        run: |
+          xcrun simctl list devices available --json > /tmp/devices.json
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          import json
+          data = json.load(open('/tmp/devices.json'))
+          devices = [d for runtime, group in data['devices'].items() if 'iOS' in runtime for d in group if 'iPad' in d['name'] and d.get('isAvailable')]
+          if not devices:
+              raise SystemExit('No available iPad simulator runtime')
+          print('IPAD_SIMULATOR_ID=' + devices[0]['udid'])
+          PY
+      - name: Build and run model and iPad UI smoke tests
+        shell: bash
+        run: |
+          set +e
+          xcodebuild test -project YourFarmWithUnicorns.xcodeproj -scheme YourFarmWithUnicorns -destination "platform=iOS Simulator,id=$IPAD_SIMULATOR_ID" -derivedDataPath DerivedData -resultBundlePath NativeTests.xcresult -jobs 3 CODE_SIGNING_ALLOWED=NO > native-tests.log 2>&1
+          status=$?
+          set -e
+          tail -n 100 native-tests.log
+          {
+            echo '## iPad simulator test output'
+            echo '```'
+            tail -n 100 native-tests.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" -ne 0 ]; then
+            grep -E 'error:|failed|Failure' native-tests.log | head -n 20 | while IFS= read -r line; do echo "::error::$line"; done
+          fi
+          exit "$status"

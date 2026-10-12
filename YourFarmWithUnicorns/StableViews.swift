@@ -37,7 +37,7 @@ struct HorsePicker: View {
                             }.frame(maxWidth: .infinity, minHeight: 175).padding(8)
                                 .background(game.active?.selectedHorseID == horse.id ? Color.purple.opacity(0.18) : Color.brown.opacity(0.08))
                                 .clipShape(RoundedRectangle(cornerRadius: 18))
-                        }.buttonStyle(.plain)
+                        }.buttonStyle(.plain).accessibilityIdentifier("horse-\(horse.id)")
                     }
                 }.padding()
                 Text("13 horses · Tack transfers automatically · All ride with the same easy controls")
