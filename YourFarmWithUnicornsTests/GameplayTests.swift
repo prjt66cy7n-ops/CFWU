@@ -1,7 +1,30 @@
 import XCTest
+#if canImport(UIKit)
+import UIKit
+#endif
 @testable import YourFarmWithUnicorns
 
 final class GameplayTests: XCTestCase {
+    #if canImport(UIKit)
+    @MainActor func testEveryBundledHorseSilhouetteAndEnvironmentDecodes() throws {
+        for sheet in ["HorseBodySheet", "HorseOverheadSheet", "UnicornOverheadSheet"] {
+            for horse in HorseCatalog.all {
+                let image = try XCTUnwrap(GameArt.silhouette(sheet: sheet, index: horse.portraitIndex), "\(sheet): \(horse.id)")
+                XCTAssertGreaterThan(image.size.width, 20)
+                XCTAssertGreaterThan(image.size.height, 60)
+            }
+        }
+        for sheet in ["ChoreEnvironmentSheet", "FarmEnvironmentSheet"] {
+            for row in 0..<2 { for column in 0..<2 {
+                let image = try XCTUnwrap(GameArt.environment(sheet: sheet, column: column, row: row))
+                XCTAssertGreaterThan(image.size.width, 600)
+                XCTAssertGreaterThan(image.size.height, 300)
+            } }
+        }
+        XCTAssertNotNil(GameArt.silhouette(sheet: "UnicornWing", index: 0, columns: 1, rows: 1))
+        XCTAssertNotNil(UIImage(named: "UnicornBrand"))
+    }
+    #endif
     private let day = Date(timeIntervalSince1970: 1_720_000_000)
     private var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian); calendar.timeZone = TimeZone(secondsFromGMT: 0)!; return calendar

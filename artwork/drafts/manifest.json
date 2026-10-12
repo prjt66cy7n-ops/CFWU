@@ -198,5 +198,38 @@
     "status": "bundled-branding-master",
     "has_transparency": false,
     "sha256": "3fadf3d839cb54b30a2775421af076def0bbfe1976437bf72ee462dc02db4a59"
+  },
+  {
+    "file": "HorseOverheadSheet.png",
+    "title": "HorseOverheadSheet",
+    "width": 1234,
+    "height": 1274,
+    "columns": 4,
+    "rows": 4,
+    "status": "bundled-rig-sheet",
+    "has_transparency": true,
+    "sha256": "4fcd443917e15d53d758d050932f7c3cd471e8a9c0332430991ce5a43076f328"
+  },
+  {
+    "file": "UnicornOverheadSheet.png",
+    "title": "UnicornOverheadSheet",
+    "width": 1234,
+    "height": 1275,
+    "columns": 4,
+    "rows": 4,
+    "status": "bundled-rig-sheet",
+    "has_transparency": true,
+    "sha256": "c31c7f36b7468e75451c8e4712b49dbbd95bdf2c1ca0731b6658f48eed65ea39"
+  },
+  {
+    "file": "UnicornWing.png",
+    "title": "Animated painted unicorn wing",
+    "width": 1536,
+    "height": 1024,
+    "columns": 1,
+    "rows": 1,
+    "status": "bundled-rig-sheet",
+    "has_transparency": true,
+    "sha256": "0cdb4df8e0e1817c2d8575a38c03b95edb15741ee50c55feab03452a6d6643c6"
   }
 ]

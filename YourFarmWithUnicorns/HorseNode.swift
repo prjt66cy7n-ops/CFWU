@@ -1,8 +1,8 @@
 import SpriteKit
 import UIKit
 
-// Temporary procedural eight-facing animation. Inventory portraits are painted
-// artwork; mounted gait/jump sprite exports are still needed for final fidelity.
+// Painted body sections sit over articulated legs, with rider/tack and wings
+// rendered independently. Rotation provides eight overhead facings.
 final class HorseNode: SKNode {
     private let figure = SKNode()
     private let shadow = SKShapeNode(ellipseOf: CGSize(width: 48, height: 24))
@@ -15,10 +15,12 @@ final class HorseNode: SKNode {
     private let ponyScale: CGFloat
     private var lastDirection = 0.0
     private var firstDirection = true
-    private var wings: [SKShapeNode] = []
+    private var wings: [SKNode] = []
     private var tailNode: SKShapeNode?
     private var headNode: SKShapeNode?
     private var carePortrait: SKSpriteNode?
+    private var paintedHead: SKSpriteNode?
+    private var paintedTail: SKSpriteNode?
     init(player: Player, mounted: Bool = true, unicorn: Bool = false) {
         ponyScale = CGFloat(player.horse.size.scale)
         super.init()
@@ -86,6 +88,7 @@ final class HorseNode: SKNode {
         figure.addChild(riderHead)
         if mounted && player.rider == .girl {
             let hair = SKShapeNode(ellipseOf: CGSize(width: 5, height: 15)); hair.fillColor = .brown
+            hair.name = "rider-hair"; hair.zPosition = 0.6
             hair.strokeColor = .clear; hair.position = CGPoint(x: 8, y: 4); figure.addChild(hair)
         }
         riderBody.isHidden = !mounted; riderHead.isHidden = !mounted
@@ -103,11 +106,12 @@ final class HorseNode: SKNode {
                 wing.zPosition = -0.1; figure.addChild(wing); wings.append(wing)
             }
         }
+        if mounted { paintOverhead(player: player, unicorn: unicorn) }
+        if unicorn { paintWings() }
         if !mounted && !unicorn,
-           let image = GameArt.region(sheet: "HorseBodySheet", column: player.horse.portraitIndex % 4,
-                                      row: player.horse.portraitIndex / 4, columns: 4, rows: 4) {
+           let image = GameArt.silhouette(sheet: "HorseBodySheet", index: player.horse.portraitIndex) {
             let painted = SKSpriteNode(texture: SKTexture(image: image))
-            painted.size = CGSize(width: 96, height: 96); painted.zPosition = 1
+            painted.size = CGSize(width: 96, height: 96 * image.size.height / image.size.width); painted.zPosition = 1
             figure.isHidden = true; addChild(painted); carePortrait = painted
             // Care portraits face left; keep saved tack visible on their actual body.
             for (visible, node, location) in [
@@ -121,17 +125,74 @@ final class HorseNode: SKNode {
         setScale(ponyScale)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+    private func paintOverhead(player: Player, unicorn: Bool) {
+        let sheet = unicorn ? "UnicornOverheadSheet" : "HorseOverheadSheet"
+        guard let image = GameArt.silhouette(sheet: sheet, index: player.horse.portraitIndex), let full = image.cgImage else { return }
+        let preserved: [SKNode] = legs.map { $0 as SKNode } + [pad, saddle, bridle, riderBody, riderHead] + wings
+        for node in figure.children {
+            if node.name != "rider-hair" && !preserved.contains(where: { $0 === node }) { node.isHidden = true }
+        }
+        // Overlapping image sections avoid seams while head and tail articulate.
+        let segments: [(Double, Double, CGFloat)] = [(0, 0.4, 1), (0.38, 0.8, 0), (0.76, 1, 2)]
+        let drawnHeight: CGFloat = 91
+        for (start, end, part) in segments {
+            let rect = CGRect(x: 0, y: CGFloat(start) * CGFloat(full.height), width: CGFloat(full.width), height: CGFloat(end - start) * CGFloat(full.height))
+            guard let cropped = full.cropping(to: rect) else { continue }
+            let sprite = SKSpriteNode(texture: SKTexture(cgImage: cropped))
+            sprite.size = CGSize(width: drawnHeight * image.size.width / image.size.height, height: drawnHeight * CGFloat(end - start))
+            sprite.position.y = drawnHeight * CGFloat(0.5 - (start + end) / 2)
+            sprite.zPosition = 0.1
+            if unicorn { sprite.shader = maneShader(palette: player.palette) }
+            figure.addChild(sprite)
+            if part == 1 { paintedHead = sprite }
+            if part == 2 { paintedTail = sprite }
+        }
+        for node in [pad, saddle, bridle, riderBody, riderHead] { node.zPosition = 0.5 }
+    }
+    private func maneShader(palette: Palette) -> SKShader {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        palette.uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        // Only purple hair changes colour; white coat, markings and horn stay intact.
+        return SKShader(source: """
+        void main() {
+            vec4 pixel = texture2D(u_texture, v_tex_coord);
+            vec3 rgb = pixel.rgb / max(pixel.a, 0.001);
+            if (rgb.b > rgb.g * 1.25 && rgb.r > rgb.g * 1.2 && rgb.b > rgb.r * 0.8) {
+                float light = max(rgb.r, rgb.b);
+                vec3 hair = mix(u_hair.rgb * 0.3, min(vec3(1.0), u_hair.rgb + vec3(0.28)), light);
+                pixel.rgb = hair * pixel.a;
+            }
+            gl_FragColor = pixel;
+        }
+        """, uniforms: [SKUniform(name: "u_hair", vectorFloat3: SIMD3(Float(red), Float(green), Float(blue)))])
+    }
+    private func paintWings() {
+        guard let image = GameArt.silhouette(sheet: "UnicornWing", index: 0, columns: 1, rows: 1) else { return }
+        for wing in wings { wing.removeFromParent() }
+        wings = []
+        for side: CGFloat in [-1, 1] {
+            let wing = SKSpriteNode(texture: SKTexture(image: image))
+            wing.size = CGSize(width: 74, height: 74 * image.size.height / image.size.width)
+            wing.anchorPoint = CGPoint(x: 0.03, y: 0.68); wing.position = CGPoint(x: side * 8, y: 6)
+            wing.xScale = side; wing.zPosition = -0.1; figure.addChild(wing); wings.append(wing)
+        }
+    }
     func eat() {
         headNode?.run(.repeat(.sequence([.moveBy(x: 0, y: -3, duration: 0.2), .moveBy(x: 0, y: 3, duration: 0.2)]), count: 4))
         carePortrait?.run(.repeat(.sequence([.rotate(toAngle: 0.035, duration: 0.25), .rotate(toAngle: 0, duration: 0.25)]), count: 4))
+        paintedHead?.run(.repeat(.sequence([.rotate(toAngle: 0.08, duration: 0.2), .rotate(toAngle: 0, duration: 0.2)]), count: 4))
     }
     func flickTail() {
         tailNode?.run(.sequence([.rotate(toAngle: 0.5, duration: 0.15), .rotate(toAngle: -0.3, duration: 0.15), .rotate(toAngle: 0, duration: 0.2)]))
+        paintedTail?.run(.sequence([.rotate(toAngle: 0.25, duration: 0.15), .rotate(toAngle: -0.2, duration: 0.15), .rotate(toAngle: 0, duration: 0.2)]))
     }
     func flightMotion(time: Double) {
         let gliding = Int(time) % 9 >= 6
         let stretch = gliding ? 0.78 : 0.65 + 0.3 * sin(time * 3.5)
-        for wing in wings { wing.yScale = CGFloat(stretch) }
+        for (index, wing) in wings.enumerated() {
+            wing.yScale = CGFloat(stretch)
+            wing.xScale = CGFloat(index == 0 ? -1 : 1) * CGFloat(gliding ? 1 : 0.72 + 0.28 * sin(time * 3.5))
+        }
     }
     func render(point: RidePoint, facing: RideFacing, gait: RideGait, moving: Bool, time: Double, jumpHeight: Double) {
         position = CGPoint(x: point.x, y: point.y)
@@ -152,6 +213,10 @@ final class HorseNode: SKNode {
         }
         figure.position.y = CGFloat(jumpHeight) + (moving && jumpHeight == 0 ? CGFloat(abs(sin(cycle * 2))) * 1.5 : 0)
         if moving { tailNode?.zRotation = CGFloat(sin(cycle * 0.5) * 0.12) }
+        if moving {
+            paintedTail?.zRotation = CGFloat(sin(cycle * 0.5) * 0.1)
+            paintedHead?.zRotation = CGFloat(sin(cycle) * 0.025)
+        }
         shadow.setScale(jumpHeight > 1 ? 0.8 : 1)
         zPosition = CGFloat(700 - point.y)
     }

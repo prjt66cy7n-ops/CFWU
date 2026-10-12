@@ -8,6 +8,7 @@ on:
       - 'YourFarmWithUnicornsTests/**'
       - 'YourFarmWithUnicornsUITests/**'
       - '.github/workflows/ipad.yml'
+      - 'scripts/prepare-app-icon.swift'
   pull_request:
   workflow_dispatch:
 permissions:
@@ -48,7 +49,7 @@ jobs:
           def count(name): return int(metrics.get(name, {}).get('_value', 0))
           total, failed, skipped = count('testsCount'), count('testsFailedCount'), count('testsSkippedCount')
           print(f'::notice::Native iPad tests: {total} executed, {failed} failed, {skipped} skipped.')
-          if total < 34 or failed or skipped:
+          if total < 35 or failed or skipped:
               raise SystemExit('Required native tests did not all execute successfully')
           PY
           fi
@@ -61,5 +62,17 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$status" -ne 0 ]; then
             grep -E 'error:|failed|Failure' native-tests.log | head -n 20 | while IFS= read -r line; do echo "::error::$line"; done
+          fi
+          exit "$status"
+      - name: Build optimized Release app for iPad simulator
+        shell: bash
+        run: |
+          set +e
+          xcodebuild build -project YourFarmWithUnicorns.xcodeproj -scheme YourFarmWithUnicorns -configuration Release -destination 'generic/platform=iOS Simulator' -derivedDataPath DerivedDataRelease -jobs 3 CODE_SIGNING_ALLOWED=NO > release-build.log 2>&1
+          status=$?
+          set -e
+          tail -n 60 release-build.log
+          if [ "$status" -ne 0 ]; then
+            grep -E 'error:|failed|Failure' release-build.log | head -n 20 | while IFS= read -r line; do echo "::error::$line"; done
           fi
           exit "$status"

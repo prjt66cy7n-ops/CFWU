@@ -66,7 +66,7 @@ The sheets were generated from written art descriptions. They do not reconstruct
 
 ## Illustrated scene and care artwork
 
-These new paintings interpret the supplied concept direction; they are not identical exports of the original mockups. Equal atlas cells are cropped at runtime with an inset excluding divider gutters. All eight environment cells and thirteen care horses are bundled. Mounted riding and flying horses still use procedural animation. The branding master is also used on the welcome screen; a platform-sized app-icon export is still required.
+These new paintings interpret the supplied concept direction; they are not identical exports of the original mockups. Equal atlas cells are cropped at runtime with an inset excluding divider gutters. All eight environment cells and thirteen care horses are bundled. Mounted riding and flying horses now use articulated painted body sections and separate rider, tack and wing layers. The branding master is used on the welcome screen and exported automatically as an opaque 1024px app icon by the native build.
 
 ### ChoreEnvironmentSheet
 
@@ -83,4 +83,16 @@ These new paintings interpret the supplied concept direction; they are not ident
 ### UnicornBrand
 
 ![UnicornBrand](UnicornBrand.png)
+
+### HorseOverheadSheet
+
+![HorseOverheadSheet](HorseOverheadSheet.png)
+
+### UnicornOverheadSheet
+
+![UnicornOverheadSheet](UnicornOverheadSheet.png)
+
+### UnicornWing
+
+![UnicornWing](UnicornWing.png)
 

@@ -38,6 +38,35 @@ enum GameArt {
         node.zPosition = -10
         return node
     }
+    static func silhouette(sheet: String, index: Int, columns: Int = 4, rows: Int = 4) -> UIImage? {
+        let key = "silhouette-\(sheet)-\(index)-\(columns)-\(rows)" as NSString
+        if let image = cache.object(forKey: key) { return image }
+        guard let image = region(sheet: sheet, column: index % columns, row: index / columns, columns: columns, rows: rows),
+              let source = image.cgImage else { return nil }
+        let width = source.width, height = source.height
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        let result = pixels.withUnsafeMutableBytes { buffer -> UIImage? in
+            guard let context = CGContext(data: buffer.baseAddress, width: width, height: height,
+                                          bitsPerComponent: 8, bytesPerRow: width * 4,
+                                          space: CGColorSpaceCreateDeviceRGB(),
+                                          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+                  let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return nil }
+            context.draw(source, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
+            var left = width, right = 0, top = height, bottom = 0
+            for y in 0..<height {
+                for x in 0..<width where bytes[(y * width + x) * 4 + 3] > 24 {
+                    left = min(left, x); right = max(right, x); top = min(top, y); bottom = max(bottom, y)
+                }
+            }
+            guard right > left, bottom > top,
+                  let full = context.makeImage(),
+                  let crop = full.cropping(to: CGRect(x: CGFloat(left), y: CGFloat(top),
+                                                      width: CGFloat(right - left + 1), height: CGFloat(bottom - top + 1))) else { return nil }
+            return UIImage(cgImage: crop)
+        }
+        if let result { cache.setObject(result, forKey: key) }
+        return result
+    }
     static func region(sheet: String, column: Int, row: Int, columns: Int, rows: Int) -> UIImage? {
         let key = "\(sheet)-\(column)-\(row)" as NSString
         if let image = cache.object(forKey: key) { return image }
