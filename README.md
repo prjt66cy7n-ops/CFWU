@@ -2,7 +2,7 @@
 
 A complete **v1 gameplay prototype** for an offline, landscape-only iPad farm game, with independent local child profiles. All seven farm areas, daily ribbons, the wand search, and a winged-unicorn flight are implemented. The app uses SwiftUI + SpriteKit with no third-party app dependencies or gameplay network calls.
 
-The game is ready for build and device testing, not a finished App Store release: scenery and animal animation are still draft artwork. Original concept illustrations remain visual references rather than runtime animation assets. Twelve horse names are provisional. Native build and smoke-test results are available under the repository's **Actions → iPad build and smoke test** workflow; do not assume a green result until the workflow finishes.
+The game is ready for build and device testing, not a finished App Store release: scenery and animal animation are still draft artwork. Original concept illustrations remain visual references rather than runtime animation assets. Twelve horse names are provisional. The native build and automated iPad checks passed for gameplay commit `06fa761`: **33 tests executed, 0 failed, 0 skipped** (32 model tests plus one UI smoke test). [View the passing run](https://github.com/prjt66cy7n-ops/CFWU/actions/runs/38244343760). This is simulator validation, not final artwork approval or real-device release QA.
 
 ## Open the app on your Mac
 
@@ -53,7 +53,7 @@ Music and SFX toggles are independent and saved per child. Nine original synthes
 
 ## Validation and core tests
 
-The Linux cloud compiled and passed all **32 pure-Swift model tests**, parsed Apple-platform sources, and verified project source membership, shared scheme references, PNG integrity, and all 20 bundled audio resources. This does not resolve Apple SDK APIs or establish UI behavior. GitHub's macOS workflow builds the real app and runs model tests plus an iPad UI smoke test for launch, three stable chores, a ribbon, horse selection, all-area Home navigation, and saved relaunch behavior.
+The Linux cloud compiled and passed all **32 pure-Swift model tests**, parsed Apple-platform sources, and verified project source membership, shared scheme references, PNG integrity, and all 20 bundled audio resources. This does not resolve Apple SDK APIs or establish UI behavior. GitHub's macOS workflow built the real app and passed 33 native tests, including the iPad UI smoke test for launch, three stable chores, a ribbon, horse selection, all-area Home navigation, and saved relaunch behavior. It also reads the result bundle to reject zero-test, skipped-test or failed-test runs.
 
 ```sh
 bash scripts/setup-swift-core.sh  # Linux only, if compiler is missing
