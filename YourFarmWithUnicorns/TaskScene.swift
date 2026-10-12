@@ -225,7 +225,15 @@ final class TaskScene: SKScene {
         default: sprite("tool", sheet: "CareTackSheet", column: 2, row: 2, at: point, width: 120)
         }
     }
-    private func hoofPoint(_ index: Int) -> CGPoint { CGPoint(x: index % 2 == 0 ? 490 : 655, y: index < 2 ? 255 : 385) }
+    private func hoofPoint(_ index: Int) -> CGPoint {
+        let width = CGFloat(96 * 2.6 * player.horse.size.scale)
+        let image = GameArt.silhouette(sheet: "HorseBodySheet", index: player.horse.portraitIndex)
+        let ratio = image.map { $0.size.height / $0.size.width } ?? 0.9
+        // Care artwork is side-on: all four hoof handles follow its ground line,
+        // rather than the former overhead figure's four corners.
+        let offsets: [CGFloat] = [-0.30, -0.10, 0.17, 0.34]
+        return CGPoint(x: bodyPoint.x + offsets[index] * width, y: bodyPoint.y - width * ratio / 2 + 10)
+    }
     private func pilePoint(_ index: Int) -> CGPoint {
         let points = [CGPoint(x: 380, y: 430), CGPoint(x: 570, y: 445), CGPoint(x: 760, y: 430), CGPoint(x: 465, y: 260), CGPoint(x: 685, y: 255)]
         return points[index]
@@ -252,6 +260,12 @@ final class TaskScene: SKScene {
     }
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let point = touches.first?.location(in: self) else { return }
+        if game.activity == .hooves && !game.completed,
+           let closest = (0..<4).min(by: {
+               hypot(point.x - hoofPoint($0).x, point.y - hoofPoint($0).y) < hypot(point.x - hoofPoint($1).x, point.y - hoofPoint($1).y)
+           }), hypot(point.x - hoofPoint(closest).x, point.y - hoofPoint(closest).y) < 43 {
+            game.liftHoof(closest); render(); notify(); return
+        }
         let hit = world.nodes(at: point).first { $0.name != nil }
         guard let name = hit?.name else { return }
         if name.hasPrefix("chicken-") {
