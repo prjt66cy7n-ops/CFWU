@@ -28,11 +28,11 @@ final class AppSmokeTests: XCTestCase {
         app.buttons["choose-horse"].tap()
         XCTAssertTrue(app.buttons["horse-daisy"].waitForExistence(timeout: 5))
         app.buttons["horse-daisy"].tap()
-        goHome(app)
+        goHome(app, stage: "horse picker")
         XCTAssertTrue(app.staticTexts["Daisy · Pink"].waitForExistence(timeout: 5))
         for place in ["washBay", "paddock", "chickenCoop", "farmhouse", "arena", "roundYard"] {
             app.buttons["visit-\(place)"].tap()
-            XCTAssertTrue(app.buttons["home"].waitForExistence(timeout: 5)); goHome(app)
+            XCTAssertTrue(app.buttons["home"].waitForExistence(timeout: 5)); goHome(app, stage: place)
         }
         app.terminate(); app.launch()
         XCTAssertTrue(app.staticTexts["CI Farmer’s Farm"].waitForExistence(timeout: 10))
@@ -48,9 +48,9 @@ final class AppSmokeTests: XCTestCase {
         app.buttons["visit-farmhouse"].tap()
         app.buttons["wand-search-0"].tap()
         XCTAssertTrue(app.staticTexts["🪄 Your wand is waiting at the stables"].waitForExistence(timeout: 5))
-        goHome(app)
+        goHome(app, stage: "farmhouse wand")
         startFlight(app)
-        goHome(app)
+        goHome(app, stage: "early flight")
         XCTAssertTrue(app.staticTexts["Sunny · Purple"].waitForExistence(timeout: 5))
         startFlight(app)
         // Await the genuine 38-second scene, without advancing its clock in a fixture.
@@ -60,11 +60,13 @@ final class AppSmokeTests: XCTestCase {
         app.buttons["visit-stables"].tap()
         XCTAssertTrue(app.buttons["launch-wand"].waitForExistence(timeout: 5))
     }
-    @MainActor private func goHome(_ app: XCUIApplication) {
+    @MainActor private func goHome(_ app: XCUIApplication, stage: String) {
         let home = app.buttons["home"]
         XCTAssertTrue(home.waitForExistence(timeout: 5))
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: home)
-        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 8), .completed, "Home must be tappable after a sheet or scene transition")
+        let result = XCTWaiter.wait(for: [ready], timeout: 8)
+        let labels = app.staticTexts.allElementsBoundByIndex.map { $0.label }.joined(separator: " | ")
+        XCTAssertEqual(result, .completed, "Home blocked at \(stage); app=\(app.frame); home=\(home.frame); labels=\(labels)")
         home.tap()
     }
     @MainActor private func startFlight(_ app: XCUIApplication) {
