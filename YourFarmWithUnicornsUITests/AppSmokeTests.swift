@@ -14,15 +14,15 @@ final class AppSmokeTests: XCTestCase {
         app.buttons["visit-stables"].tap()
         let canvas = app.otherElements["farm-task-canvas"]
         XCTAssertTrue(canvas.waitForExistence(timeout: 5))
-        drag(canvas, from: CGPoint(x: 150, y: 95), to: CGPoint(x: 470, y: 325))
+        drag(canvas, from: CGPoint(x: 100, y: 95), to: CGPoint(x: 470, y: 325))
         assertCompleted(app)
         app.buttons["activity-stableWater"].tap()
-        drag(canvas, from: CGPoint(x: 150, y: 95), to: CGPoint(x: 180, y: 335))
+        drag(canvas, from: CGPoint(x: 300, y: 95), to: CGPoint(x: 180, y: 335))
         world(canvas, CGPoint(x: 180, y: 430)).tap()
         drag(canvas, from: CGPoint(x: 180, y: 335), to: CGPoint(x: 505, y: 260))
         assertCompleted(app)
         app.buttons["activity-sweepStable"].tap()
-        for _ in 0..<3 { drag(canvas, from: CGPoint(x: 150, y: 95), to: CGPoint(x: 790, y: 205)) }
+        for _ in 0..<3 { drag(canvas, from: CGPoint(x: 820, y: 95), to: CGPoint(x: 310, y: 205)) }
         assertCompleted(app)
         XCTAssertEqual(app.otherElements["ribbon-stables"].label, "Stables ribbon earned")
         app.buttons["choose-horse"].tap()

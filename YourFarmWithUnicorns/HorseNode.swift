@@ -18,9 +18,15 @@ final class HorseNode: SKNode {
     private var wings: [SKNode] = []
     private var tailNode: SKShapeNode?
     private var headNode: SKShapeNode?
-    private var carePortrait: SKSpriteNode?
+    private var carePortrait: SKNode?
+    private var careLegs: [SKSpriteNode] = []
+    private var liftedCareLeg: Int?
     private var paintedHead: SKSpriteNode?
     private var paintedTail: SKSpriteNode?
+    private var angledPlayer: Player?
+    private var angledFacing: RideFacing?
+    private let angledFigure = SKNode()
+    private var angledLegs: [SKSpriteNode] = []
     init(player: Player, mounted: Bool = true, unicorn: Bool = false) {
         ponyScale = CGFloat(player.horse.size.scale)
         super.init()
@@ -110,16 +116,39 @@ final class HorseNode: SKNode {
         if unicorn { paintWings() }
         if !mounted && !unicorn,
            let image = GameArt.silhouette(sheet: "HorseBodySheet", index: player.horse.portraitIndex) {
-            let painted = SKSpriteNode(texture: SKTexture(image: image))
-            painted.size = CGSize(width: 96, height: 96 * image.size.height / image.size.width); painted.zPosition = 1
+            let painted = SKNode(); painted.zPosition = 1
+            if let full = image.cgImage {
+                let height = 96 * image.size.height / image.size.width
+                if let upper = full.cropping(to: CGRect(x: 0, y: 0, width: CGFloat(full.width), height: CGFloat(full.height) * 0.67)) {
+                    let body = SKSpriteNode(texture: SKTexture(cgImage: upper))
+                    body.size = CGSize(width: 96, height: height * 0.67)
+                    body.position.y = height * 0.165; painted.addChild(body)
+                }
+                let cuts: [CGFloat] = [0, 0.34, 0.6, 0.82, 1]
+                for index in 0..<4 {
+                    let x = cuts[index] * CGFloat(full.width), span = (cuts[index + 1] - cuts[index]) * CGFloat(full.width)
+                    guard let slice = full.cropping(to: CGRect(x: x, y: CGFloat(full.height) * 0.66,
+                                                              width: span, height: CGFloat(full.height) * 0.34)) else { continue }
+                    let leg = SKSpriteNode(texture: SKTexture(cgImage: slice))
+                    leg.size = CGSize(width: 96 * (cuts[index + 1] - cuts[index]), height: height * 0.34)
+                    leg.anchorPoint = CGPoint(x: 0.5, y: 1)
+                    leg.position = CGPoint(x: 96 * ((cuts[index] + cuts[index + 1]) / 2 - 0.5), y: -height * 0.16)
+                    painted.addChild(leg); careLegs.append(leg)
+                }
+            }
             figure.isHidden = true; addChild(painted); carePortrait = painted
             // Care portraits face left; keep saved tack visible on their actual body.
-            for (visible, node, location) in [
-                (player.tack.saddlePad, pad, CGPoint(x: 7, y: 3)),
-                (player.tack.saddle, saddle, CGPoint(x: 7, y: 7)),
-                (player.tack.bridle, bridle, CGPoint(x: -32, y: 12))
-            ] where visible {
-                node.removeFromParent(); node.position = location; node.zPosition = 2; addChild(node)
+            let items: [(Bool, UIImage?, CGPoint, CGSize)] = [
+                (player.tack.saddlePad, GameArt.pad(player.palette), CGPoint(x: 4, y: 16), CGSize(width: 34, height: 28)),
+                (player.tack.saddle, GameArt.region(sheet: "CareTackSheet", column: 0, row: 3, columns: 4, rows: 4),
+                 CGPoint(x: 4, y: 19), CGSize(width: 28, height: 27)),
+                (player.tack.bridle, GameArt.region(sheet: "CareTackSheet", column: 2, row: 3, columns: 4, rows: 4),
+                 CGPoint(x: -33, y: 18), CGSize(width: 20, height: 27))
+            ]
+            for (visible, image, location, size) in items where visible {
+                guard let image else { continue }
+                let tack = SKSpriteNode(texture: SKTexture(image: image)); tack.size = size
+                tack.position = location; tack.zPosition = 2; addChild(tack)
             }
         }
         setScale(ponyScale)
@@ -177,6 +206,13 @@ final class HorseNode: SKNode {
             wing.xScale = side; wing.zPosition = -0.1; figure.addChild(wing); wings.append(wing)
         }
     }
+    func liftCareLeg(_ index: Int?) {
+        guard liftedCareLeg != index else { return }
+        liftedCareLeg = index
+        for (legIndex, leg) in careLegs.enumerated() {
+            leg.run(.rotate(toAngle: legIndex == index ? (legIndex < 2 ? 0.85 : -0.85) : 0, duration: 0.22), withKey: "hoof-lift")
+        }
+    }
     func eat() {
         headNode?.run(.repeat(.sequence([.moveBy(x: 0, y: -3, duration: 0.2), .moveBy(x: 0, y: 3, duration: 0.2)]), count: 4))
         carePortrait?.run(.repeat(.sequence([.rotate(toAngle: 0.035, duration: 0.25), .rotate(toAngle: 0, duration: 0.25)]), count: 4))
@@ -194,7 +230,58 @@ final class HorseNode: SKNode {
             wing.xScale = CGFloat(index == 0 ? -1 : 1) * CGFloat(gliding ? 1 : 0.72 + 0.28 * sin(time * 3.5))
         }
     }
+    func enableAngledRiding(player: Player) {
+        angledPlayer = player; figure.isHidden = true; addChild(angledFigure)
+    }
+    private func renderAngled(player: Player, point: RidePoint, facing: RideFacing, gait: RideGait,
+                              moving: Bool, time: Double, jumpHeight: Double) {
+        position = CGPoint(x: point.x, y: point.y)
+        if angledFacing != facing {
+            angledFacing = facing; angledFigure.removeAllChildren(); angledLegs = []
+            if let image = GameArt.silhouette(sheet: "HorseRide-\(player.horse.id)", index: facing.rawValue, columns: 4, rows: 2),
+               let full = image.cgImage {
+                let height: CGFloat = 76, width = height * image.size.width / image.size.height
+                if let upper = full.cropping(to: CGRect(x: 0, y: 0, width: CGFloat(full.width), height: CGFloat(full.height) * 0.68)) {
+                    let body = SKSpriteNode(texture: SKTexture(cgImage: upper))
+                    body.size = CGSize(width: width, height: height * 0.68)
+                    body.position.y = height * 0.66; angledFigure.addChild(body)
+                }
+                for index in 0..<4 {
+                    let span = CGFloat(full.width) / 4
+                    guard let lower = full.cropping(to: CGRect(x: CGFloat(index) * span, y: CGFloat(full.height) * 0.67,
+                                                               width: span, height: CGFloat(full.height) * 0.33)) else { continue }
+                    let leg = SKSpriteNode(texture: SKTexture(cgImage: lower))
+                    leg.size = CGSize(width: width / 4, height: height * 0.33)
+                    leg.anchorPoint = CGPoint(x: 0.5, y: 1)
+                    leg.position = CGPoint(x: width * (CGFloat(index) / 4 - 0.375), y: height * 0.33)
+                    angledFigure.addChild(leg); angledLegs.append(leg)
+                }
+                for node in [pad, saddle, riderBody, riderHead] {
+                    node.removeFromParent(); node.position.x = 0; angledFigure.addChild(node)
+                }
+                pad.position.y = 39; saddle.position.y = 42; riderBody.position.y = 49; riderHead.position.y = 63
+                riderBody.zPosition = 2; riderHead.zPosition = 3
+                if player.rider == .girl {
+                    let hair = SKShapeNode(ellipseOf: CGSize(width: 5, height: 14))
+                    hair.position = CGPoint(x: 8, y: 54); hair.fillColor = .brown; hair.strokeColor = .clear
+                    hair.zPosition = 2; angledFigure.addChild(hair)
+                }
+            }
+        }
+        let cadence = gait == .walk ? 5.0 : (gait == .trot ? 9.0 : 12.0)
+        for (index, leg) in angledLegs.enumerated() {
+            let phase = time * cadence + Double(index) * .pi / 2
+            leg.zRotation = jumpHeight > 1 ? (index < 2 ? 0.35 : -0.35) : (moving ? CGFloat(sin(phase) * 0.12) : 0)
+            leg.yScale = jumpHeight > 1 ? 0.7 : 1
+        }
+        angledFigure.position.y = CGFloat(jumpHeight) + (moving ? CGFloat(abs(sin(time * cadence)) * 1.5) : 0)
+        shadow.setScale(jumpHeight > 1 ? 0.8 : 1); zPosition = CGFloat(700 - point.y)
+    }
     func render(point: RidePoint, facing: RideFacing, gait: RideGait, moving: Bool, time: Double, jumpHeight: Double) {
+        if let player = angledPlayer {
+            renderAngled(player: player, point: point, facing: facing, gait: gait, moving: moving, time: time, jumpHeight: jumpHeight)
+            return
+        }
         position = CGPoint(x: point.x, y: point.y)
         let target = Double(facing.rawValue) * .pi / 4 - .pi / 2
         if firstDirection { lastDirection = target; firstDirection = false }

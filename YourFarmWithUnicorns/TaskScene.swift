@@ -1,6 +1,7 @@
 import SpriteKit
 
 final class TaskScene: SKScene {
+    var onSelect: ((FarmActivity) -> Void)?
     var onChange: ((ChoreGame, Bool) -> Void)?
     private var entry: ChoreEntry
     private(set) var game: ChoreGame {
@@ -10,6 +11,12 @@ final class TaskScene: SKScene {
     private var player: Player
     private var horse: HorseNode
     private let world = SKNode()
+    private let animals = SKNode()
+    private var renderingActive = true
+    private var renderingActivity = FarmActivity.feed
+    private var feedingPoint: CGPoint?
+    private var feedingElapsed = 0.0
+    private var area: FarmArea { FarmArea.allCases.first { $0.activities.contains(game.activity) }! }
     private var dragging: String?
     private var dragPosition: CGPoint?
     private var lastDrag: CGPoint?
@@ -19,7 +26,27 @@ final class TaskScene: SKScene {
     private let entryBrokenFence: Bool
     private var animalElapsed = 0.0
     private var nextAnimal = Double.random(in: 10...22)
-    private let source = CGPoint(x: 150, y: 95)
+    private var source: CGPoint { source(for: game.activity, stage: game.stage) }
+    private func source(for activity: FarmActivity, stage: Int = 0) -> CGPoint {
+        switch activity {
+        case .feed: return foodPoint(foodVariant)
+        case .stableWater: return CGPoint(x: 300, y: 95)
+        case .sweepStable, .sweepCoop: return CGPoint(x: 820, y: 95)
+        case .paddockWater: return CGPoint(x: 415, y: 110)
+        case .trough: return CGPoint(x: stage == 0 ? 100 : 90, y: stage == 0 ? 385 : 300)
+        case .hay: return CGPoint(x: 850, y: 140)
+        case .fence: return CGPoint(x: 850, y: 400)
+        case .straw: return CGPoint(x: 165, y: 120)
+        case .treats: return CGPoint(x: 300, y: 95)
+        case .coopWater: return CGPoint(x: 890, y: 140)
+        case .hooves: return CGPoint(x: 260, y: 95)
+        case .wash: return CGPoint(x: stage == 1 ? 420 : 350, y: 95)
+        default: return CGPoint(x: 150, y: 95)
+        }
+    }
+    private func foodPoint(_ variant: Int) -> CGPoint {
+        [CGPoint(x: 100, y: 95), CGPoint(x: 100, y: 175), CGPoint(x: 180, y: 175), CGPoint(x: 100, y: 255)][variant % 4]
+    }
     private let bodyPoint = CGPoint(x: 575, y: 325)
     private var tapPoint: CGPoint { CGPoint(x: 180, y: game.activity == .paddockWater ? 355 : 430) }
     private var bucketFillPoint: CGPoint { CGPoint(x: 180, y: tapPoint.y - 95) }
@@ -33,7 +60,7 @@ final class TaskScene: SKScene {
             return game.bucketFull ? "Drag the full bucket to your horse" : (game.bucketAtTap ? "Tap the tap to fill your bucket" : "Drag the bucket under the tap")
         case .brush: return "Brush back and forth over your horse"
         case .wash: return ["Drag the hose to wet the coat", "Scrub with the sponge", "Drag the hose to rinse"][min(2, game.stage)]
-        case .hooves: return "Tap a hoof to lift · Tap the pick three times · Do all four"
+        case .hooves: return "Tap a hoof to lift · Scrub it with the pick · Do all four"
         case .tack: return "Drag pad, saddle and bridle onto the horse · Tap equipped tack to remove"
         case .eggs: return "Tap a nest · Drag each egg to the basket"
         case .straw: return "Tap each nest to clear straw · Drag fresh straw into it"
@@ -55,7 +82,7 @@ final class TaskScene: SKScene {
         backgroundColor = UIColor(red: 0.93, green: 0.85, blue: 0.64, alpha: 1)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
-    override func didMove(to view: SKView) { addChild(world); render(); demonstrate() }
+    override func didMove(to view: SKView) { addChild(world); animals.zPosition = 3; addChild(animals); render(); demonstrate() }
     func choose(_ activity: FarmActivity) {
         entry.select(activity, tack: player.tack)
         reportedCompletion = false; dragging = nil; dragPosition = nil; lastDrag = nil
@@ -72,15 +99,18 @@ final class TaskScene: SKScene {
     private func sprite(_ name: String, sheet: String, column: Int, row: Int, columns: Int = 4, rows: Int = 4, at point: CGPoint, width: CGFloat) {
         guard let image = GameArt.region(sheet: sheet, column: column, row: row, columns: columns, rows: rows) else { return }
         let node = SKSpriteNode(texture: SKTexture(image: image))
-        node.name = name; node.size = CGSize(width: width, height: width * image.size.height / image.size.width)
+        node.name = renderingActive ? name : "select-\(renderingActivity.rawValue)"
+        let aspect = image.size.height / image.size.width
+        node.size = aspect > 1 ? CGSize(width: width / aspect, height: width) : CGSize(width: width, height: width * aspect)
         node.position = point; world.addChild(node)
     }
     private func symbol(_ text: String, name: String, at point: CGPoint, size: CGFloat = 58) {
         let node = SKLabelNode(text: text); node.fontSize = size
         node.verticalAlignmentMode = .center; node.horizontalAlignmentMode = .center
-        node.name = name; node.position = point; world.addChild(node)
+        node.name = renderingActive ? name : "select-\(renderingActivity.rawValue)"; node.position = point; world.addChild(node)
     }
     private func zone(_ name: String, at point: CGPoint, width: CGFloat, height: CGFloat, glow: Bool = true) {
+        guard renderingActive else { return }
         let rect = CGRect(x: point.x - width / 2, y: point.y - height / 2, width: width, height: height)
         targets[name] = rect
         let shape = SKShapeNode(rect: rect, cornerRadius: 16); shape.name = name
@@ -100,22 +130,61 @@ final class TaskScene: SKScene {
                                                row: coop || paddock ? 1 : 0, size: size) {
             world.addChild(background); floor.isHidden = true
         }
-        if coop {
-            for index in 0..<3 {
-                sprite("chicken-\(index)", sheet: "ChickenPoseSheet", column: index == 0 ? 0 : index - 1,
-                       row: index == 0 ? 0 : 1, columns: 4, rows: 2,
-                       at: CGPoint(x: 550 + index * 130, y: 285), width: 110)
+        if washBay {
+            let rack = SKShapeNode(rectOf: CGSize(width: 100, height: 230), cornerRadius: 8)
+            rack.position = CGPoint(x: 880, y: 265); rack.fillColor = UIColor(red: 0.53, green: 0.32, blue: 0.14, alpha: 1)
+            rack.strokeColor = .brown; rack.zPosition = -1; world.addChild(rack)
+            for height in [180, 260, 340] {
+                let peg = SKShapeNode(rectOf: CGSize(width: 125, height: 10), cornerRadius: 3)
+                peg.position = CGPoint(x: 880, y: height); peg.fillColor = .brown; peg.strokeColor = .clear
+                world.addChild(peg)
             }
-        } else if ![.manure, .trough, .fence].contains(activity) {
-            horse.render(point: .zero, facing: .west, gait: .walk, moving: false, time: 0, jumpHeight: 0)
-            horse.position = bodyPoint; horse.setScale(CGFloat(2.6 * player.horse.size.scale)); world.addChild(horse)
-            let sign = SKLabelNode(text: player.horse.name); sign.fontColor = .brown; sign.fontName = "AvenirNext-DemiBold"
-            sign.fontSize = 25; sign.position = CGPoint(x: 580, y: 490); world.addChild(sign)
         }
+        if coop {
+            if animals.children.isEmpty {
+                for index in 0..<3 {
+                    guard let image = GameArt.region(sheet: "ChickenPoseSheet", column: index == 0 ? 0 : index - 1,
+                                                    row: index == 0 ? 0 : 1, columns: 4, rows: 2) else { continue }
+                    let chicken = SKSpriteNode(texture: SKTexture(image: image))
+                    chicken.name = "chicken-\(index)"; chicken.size = CGSize(width: 100, height: 100 * image.size.height / image.size.width)
+                    chicken.position = CGPoint(x: 520 + index * 120, y: 285); animals.addChild(chicken)
+                }
+            }
+        } else {
+            horse.render(point: .zero, facing: .west, gait: .walk, moving: false, time: 0, jumpHeight: 0)
+            horse.liftCareLeg(game.activity == .hooves ? game.liftedHoof : nil)
+            horse.position = bodyPoint; horse.setScale(CGFloat(2.6 * player.horse.size.scale)); world.addChild(horse)
+        }
+        // Every activity's existing objects are rendered in the same location.
+        // Only its interaction targets and tool roles change when selected.
+        for other in area.activities where other != activity {
+            renderActivity(entry.state(for: other, tack: player.tack), active: false)
+        }
+        renderActivity(game, active: true)
+        if let feedingPoint {
+            for index in 0..<18 {
+                let seed = SKShapeNode(circleOfRadius: 3)
+                seed.fillColor = .systemYellow; seed.strokeColor = .brown
+                seed.position = CGPoint(x: feedingPoint.x + CGFloat((index * 29) % 100 - 50),
+                                        y: feedingPoint.y + CGFloat((index * 17) % 50 - 25))
+                world.addChild(seed)
+            }
+        }
+        if let dragging, let position = dragPosition { world.childNode(withName: dragging)?.position = position }
+        if game.completed { symbol("✨ ✓ ✨", name: "done", at: CGPoint(x: 500, y: 520), size: 42) }
+    }
+    private func renderActivity(_ game: ChoreGame, active: Bool) {
+        let activity = game.activity
+        renderingActive = active; renderingActivity = activity
+        let source = source(for: activity, stage: game.stage)
+        let tapPoint = CGPoint(x: 180, y: activity == .paddockWater ? 355 : 430)
+        let bucketFillPoint = CGPoint(x: 180, y: tapPoint.y - 95)
         switch activity {
         case .feed:
             zone("destination", at: CGPoint(x: 470, y: 325), width: 140, height: 130)
-            food(at: source)
+            for index in 0..<4 {
+                food(at: foodPoint(index), variant: index, name: index == foodVariant ? "tool" : "food-item-\(index)")
+            }
         case .stableWater, .paddockWater:
             if activity == .paddockWater {
                 let mount = SKShapeNode(rectOf: CGSize(width: 20, height: 44), cornerRadius: 3)
@@ -129,17 +198,23 @@ final class TaskScene: SKScene {
                    at: game.completed ? CGPoint(x: 505, y: 260) : (game.bucketAtTap && dragPosition == nil ? bucketFillPoint : source), width: 120)
         case .brush, .wash:
             zone("destination", at: bodyPoint, width: 245, height: 180)
-            for index in 0..<6 {
+            for index in 0..<(activity == .wash && (!active || game.stage == 0) ? 0 : 6) {
                 let dirt = SKShapeNode(ellipseOf: CGSize(width: 23, height: 15))
-                dirt.fillColor = activity == .wash && game.stage == 1 ? .white : .brown
+                dirt.fillColor = activity == .wash ? .white : .brown
                 dirt.strokeColor = .clear; dirt.position = CGPoint(x: 540 + (index % 3) * 25, y: 300 + (index / 3) * 45)
                 dirt.alpha = CGFloat(1 - game.progress); world.addChild(dirt)
             }
-            sprite("tool", sheet: "CareTackSheet", column: activity == .brush ? 0 : (game.stage == 1 ? 2 : 3), row: 0, at: source, width: 120)
+            sprite("tool", sheet: "CareTackSheet", column: activity == .brush ? 0 : (game.stage == 1 ? 2 : 3), row: 0, at: source, width: 100)
+            if activity == .wash {
+                let spare = game.stage == 1 ? 3 : 2
+                sprite("spare", sheet: "CareTackSheet", column: spare, row: 0,
+                       at: CGPoint(x: spare == 2 ? 420 : 350, y: 95), width: 100)
+                world.children.last?.name = "select-wash"
+            }
         case .hooves:
             for index in 0..<4 {
                 let point = hoofPoint(index)
-                symbol(game.collection.contains(index) ? "✓" : (game.liftedHoof == index ? "⬆️" : "🧲"), name: "hoof-\(index)", at: point, size: 36)
+                symbol(game.collection.contains(index) ? "✓" : "•", name: "hoof-\(index)", at: point, size: 36)
                 zone("hoof-\(index)", at: point, width: 70, height: 70, glow: !game.collection.contains(index))
             }
             sprite("tool", sheet: "CareTackSheet", column: 1, row: 0, at: source, width: 115)
@@ -147,7 +222,15 @@ final class TaskScene: SKScene {
             zone("destination", at: bodyPoint, width: 265, height: 190)
             for index in 0..<3 {
                 let equipped = [game.tack.saddlePad, game.tack.saddle, game.tack.bridle][index]
-                let position = equipped ? CGPoint(x: 510 + index * 70, y: 440) : CGPoint(x: 130 + index * 150, y: 115)
+                if equipped {
+                    let factor = CGFloat(2.6 * player.horse.size.scale)
+                    let location = index == 2 ? CGPoint(x: bodyPoint.x - 33 * factor, y: bodyPoint.y + 18 * factor) : CGPoint(x: bodyPoint.x + 4 * factor, y: bodyPoint.y + 16 * factor)
+                    let target = SKShapeNode(circleOfRadius: 23)
+                    target.position = location; target.fillColor = .white.withAlphaComponent(0.001); target.strokeColor = .clear
+                    target.name = active ? "equipped-\(index)" : "select-tack"; target.zPosition = 4
+                    world.addChild(target); continue
+                }
+                let position = CGPoint(x: 880, y: 180 + index * 80)
                 if index == 0 {
                     sprite(equipped ? "equipped-0" : "tack-0", sheet: "TackPaletteSheet", column: player.palette.artColumn, row: 0, columns: 6, rows: 2, at: position, width: 115)
                 } else {
@@ -155,12 +238,12 @@ final class TaskScene: SKScene {
                 }
             }
         case .manure:
-            zone("destination", at: CGPoint(x: 175, y: 320), width: 230, height: 170)
-            sprite("destination", sheet: "CareTackSheet", column: 3, row: 1, at: CGPoint(x: 175, y: 320), width: 200)
+            zone("destination", at: CGPoint(x: 130, y: 170), width: 230, height: 170)
+            sprite("destination", sheet: "CareTackSheet", column: 3, row: 1, at: CGPoint(x: 130, y: 170), width: 160)
             // Deposited piles stay in the bowl, above the wheelbarrow artwork.
             for (slot, _) in game.collection.sorted().enumerated() {
                 sprite("load-\(slot)", sheet: "CoopPaddockSheet", column: 1, row: 2,
-                       at: CGPoint(x: 151 + (slot % 3) * 22, y: 346 + (slot / 3) * 13), width: 48)
+                       at: CGPoint(x: 111 + (slot % 3) * 18, y: 191 + (slot / 3) * 11), width: 40)
                 world.childNode(withName: "load-\(slot)")?.zPosition = 1
             }
             for index in 0..<5 where !game.collection.contains(index) {
@@ -180,7 +263,10 @@ final class TaskScene: SKScene {
                 water.alpha = game.stage == 0 ? CGFloat(1 - game.progress) : 1
                 world.addChild(water)
             }
-            sprite("tool", sheet: "CareTackSheet", column: game.stage == 0 ? 0 : 3, row: 0, at: source, width: 130)
+            sprite("tool", sheet: "CareTackSheet", column: game.stage == 0 ? 0 : 3, row: 0, at: source, width: 95)
+            sprite("spare", sheet: "CareTackSheet", column: game.stage == 0 ? 3 : 0, row: 0,
+                   at: self.source(for: .trough, stage: game.stage == 0 ? 1 : 0), width: 95)
+            world.children.last?.name = "select-trough"
         case .hay:
             zone("destination", at: CGPoint(x: 455, y: 310), width: 190, height: 170)
             sprite("tool", sheet: "CareTackSheet", column: 2, row: 2, at: source, width: 125)
@@ -197,20 +283,35 @@ final class TaskScene: SKScene {
                 world.addChild(rail)
                 if !game.completed { zone("destination", at: point, width: 110, height: 90) }
                 sprite("tool", sheet: "CoopPaddockSheet", column: 3, row: 2,
-                       at: game.hammerAtFence ? CGPoint(x: 610, y: 400) : source, width: 110)
+                       at: game.hammerAtFence ? CGPoint(x: 610, y: 400) : source, width: 95)
+            } else {
+                sprite("tool", sheet: "CoopPaddockSheet", column: 3, row: 2, at: source, width: 95)
             }
         case .eggs, .straw:
+            if active || (activity == .eggs && self.game.activity != .straw) {
             for index in 0..<4 {
                 let point = nestPoint(index)
                 let nest = SKShapeNode(rectOf: CGSize(width: 100, height: 95), cornerRadius: 12)
                 nest.fillColor = .brown.withAlphaComponent(0.55); nest.strokeColor = .brown
                 nest.position = point; nest.name = "nest-\(index)"; world.addChild(nest)
-                if activity == .eggs, game.revealed.contains(index), !game.collection.contains(index) {
-                    sprite("egg-\(index)", sheet: "CoopPaddockSheet", column: 0, row: 0, at: point, width: 50)
-                } else {
-                    symbol(game.collection.contains(index) ? "✓" : (game.revealed.contains(index) ? "✨" : "🌾"), name: "nest-\(index)", at: point, size: 38)
+                let eggs = entry.state(for: .eggs, tack: player.tack)
+                if !eggs.collection.contains(index) {
+                    sprite(eggs.revealed.contains(index) && activity == .eggs ? "egg-\(index)" : "nest-\(index)",
+                           sheet: "CoopPaddockSheet", column: 0, row: 0,
+                           at: CGPoint(x: point.x + 8, y: point.y + 4), width: 42)
                 }
-                zone("nest-\(index)", at: point, width: 110, height: 100)
+                // Straw conceals most of each already-present egg until searched.
+                for clump in 0..<3 {
+                    let straw = SKShapeNode(ellipseOf: CGSize(width: 40, height: 25))
+                    straw.position = CGPoint(x: point.x - 20 + CGFloat(clump * 20), y: point.y - 1 + CGFloat(clump % 2 * 8))
+                    straw.fillColor = UIColor(red: 0.87, green: 0.66, blue: 0.28, alpha: 1)
+                    straw.strokeColor = .systemBrown; straw.lineWidth = 1
+                    straw.alpha = activity == .straw ? (game.revealed.contains(index) && !game.collection.contains(index) ? 0.1 : 1) : (eggs.revealed.contains(index) ? 0.2 : 1)
+                    straw.name = activity == .eggs && eggs.revealed.contains(index) ? nil : (active ? "nest-\(index)" : "select-\(activity.rawValue)")
+                    world.addChild(straw)
+                }
+                zone("nest-\(index)", at: point, width: 110, height: 100, glow: activity == .straw)
+            }
             }
             if activity == .eggs {
                 zone("destination", at: CGPoint(x: 165, y: 270), width: 180, height: 150)
@@ -220,35 +321,35 @@ final class TaskScene: SKScene {
             zone("destination", at: CGPoint(x: 605, y: 235), width: 500, height: 220)
             sprite("tool", sheet: "CoopPaddockSheet", column: 2, row: 0, at: source, width: 130)
         case .coopWater:
-            zone("destination", at: CGPoint(x: 780, y: 365), width: 150, height: 190)
-            sprite("destination", sheet: "CoopPaddockSheet", column: game.completed ? 1 : 0, row: 1, at: CGPoint(x: 780, y: 365), width: 150)
+            zone("destination", at: CGPoint(x: 875, y: 230), width: 150, height: 150)
+            sprite("destination", sheet: "CoopPaddockSheet", column: game.completed ? 1 : 0, row: 1, at: CGPoint(x: 875, y: 230), width: 150)
             sprite("tool", sheet: "CareTackSheet", column: 3, row: 0, at: source, width: 135)
         case .sweepStable, .sweepCoop:
-            zone("destination", at: CGPoint(x: 555, y: 205), width: 500, height: 150)
-            for index in 0..<4 {
-                sprite("dirt-\(index)", sheet: "CoopPaddockSheet", column: 2, row: 3, at: CGPoint(x: 390 + index * 115, y: 205), width: 95)
-                world.childNode(withName: "dirt-\(index)")?.alpha = CGFloat(1 - game.progress)
+            zone("destination", at: CGPoint(x: 555, y: 200), width: 650, height: 240)
+            for index in 0..<22 {
+                let point = CGPoint(x: 260 + (index * 137) % 590, y: 85 + (index * 61) % 210)
+                sprite("dirt-\(index)", sheet: "CoopPaddockSheet", column: 2, row: 3,
+                       at: point, width: CGFloat(28 + (index * 13) % 37))
+                if let patch = world.children.last { patch.alpha = CGFloat(1 - game.progress); patch.zPosition = -0.2 }
             }
             sprite("tool", sheet: "CareTackSheet", column: 2, row: 1, at: source, width: 120)
         case .treats:
             zone("destination", at: CGPoint(x: 605, y: 240), width: 490, height: 220)
             sprite("tool", sheet: "CoopPaddockSheet", column: foodVariant % 2 == 0 ? 0 : 3, row: foodVariant % 2 == 0 ? 2 : 1, at: source, width: 130)
         }
-        if let dragging, let position = dragPosition { world.childNode(withName: dragging)?.position = position }
-        if !game.completed {
-            let arrow = SKLabelNode(text: game.isScrubbing ? "↔" : "→")
-            arrow.fontSize = 44; arrow.fontColor = .brown; arrow.position = CGPoint(x: 265, y: 100); world.addChild(arrow)
-            arrow.run(.repeatForever(.sequence([.moveBy(x: 15, y: 0, duration: 0.5), .moveBy(x: -15, y: 0, duration: 0.5)])))
-        } else {
-            symbol("✨ ✓ ✨", name: "done", at: CGPoint(x: 500, y: 520), size: 42)
-        }
+        renderingActive = true
     }
-    private func food(at point: CGPoint) {
-        switch foodVariant % 4 {
-        case 0: sprite("tool", sheet: "CareTackSheet", column: 0, row: 2, at: point, width: 120)
-        case 1: sprite("tool", sheet: "CareTackSheet", column: 1, row: 2, at: point, width: 100)
-        case 2: symbol("🍬", name: "tool", at: point)
-        default: sprite("tool", sheet: "CareTackSheet", column: 2, row: 2, at: point, width: 120)
+    private func food(at point: CGPoint, variant: Int? = nil, name: String = "tool") {
+        switch (variant ?? foodVariant) % 4 {
+        case 0: sprite(name, sheet: "CareTackSheet", column: 0, row: 2, at: point, width: 90)
+        case 1: sprite(name, sheet: "CareTackSheet", column: 1, row: 2, at: point, width: 85)
+        case 2:
+            let stick = SKShapeNode(rectOf: CGSize(width: 65, height: 13), cornerRadius: 5)
+            stick.name = renderingActive ? name : "select-feed"; stick.position = point
+            stick.fillColor = UIColor(red: 0.12, green: 0.08, blue: 0.05, alpha: 1)
+            stick.strokeColor = .brown; stick.lineWidth = 2; stick.zRotation = 0.2
+            world.addChild(stick)
+        default: sprite(name, sheet: "CareTackSheet", column: 2, row: 2, at: point, width: 90)
         }
     }
     private func hoofPoint(_ index: Int) -> CGPoint {
@@ -258,10 +359,12 @@ final class TaskScene: SKScene {
         // Care artwork is side-on: all four hoof handles follow its ground line,
         // rather than the former overhead figure's four corners.
         let offsets: [CGFloat] = [-0.30, -0.10, 0.17, 0.34]
-        return CGPoint(x: bodyPoint.x + offsets[index] * width, y: bodyPoint.y - width * ratio / 2 + 10)
+        let lifted = game.activity == .hooves && game.liftedHoof == index
+        return CGPoint(x: bodyPoint.x + offsets[index] * width + (lifted ? width * 0.18 * (index < 2 ? 1 : -1) : 0),
+                       y: bodyPoint.y - width * ratio / 2 + 10 + (lifted ? width * 0.1 : 0))
     }
     private func pilePoint(_ index: Int) -> CGPoint {
-        let points = [CGPoint(x: 380, y: 430), CGPoint(x: 570, y: 445), CGPoint(x: 760, y: 430), CGPoint(x: 465, y: 260), CGPoint(x: 685, y: 255)]
+        let points = [CGPoint(x: 350, y: 185), CGPoint(x: 540, y: 145), CGPoint(x: 750, y: 215), CGPoint(x: 410, y: 285), CGPoint(x: 740, y: 330)]
         return points[index]
     }
     private func nestPoint(_ index: Int) -> CGPoint { CGPoint(x: 365 + index * 150, y: 425) }
@@ -276,13 +379,32 @@ final class TaskScene: SKScene {
                 horse.run(.sequence([.rotate(byAngle: 0.06, duration: 0.25), .rotate(byAngle: -0.06, duration: 0.25)]))
                 symbol("😋", name: "eating", at: CGPoint(x: 460, y: 380), size: 34)
             }
-            if [.grain, .treats].contains(game.activity) {
-                for index in 0..<3 {
-                    world.childNode(withName: "chicken-\(index)")?.run(.sequence([.move(to: CGPoint(x: 480 + index * 70, y: 235), duration: 0.6), .repeat(.sequence([.rotate(byAngle: 0.12, duration: 0.15), .rotate(byAngle: -0.12, duration: 0.15)]), count: 3)]))
+            if [.feed, .hay].contains(game.activity) {
+                let sound = game.activity == .hay ? "hay" : ["carrot", "apple", "liquorice", "hay"][foodVariant % 4]
+                GameAudio.effect("crunch-\(sound)", enabled: player.sfxEnabled)
+                if Int.random(in: 0..<5) == 0 {
+                    run(.sequence([.wait(forDuration: Double.random(in: 2...4)), .run { [weak self] in
+                        guard let self else { return }
+                        GameAudio.effect("horse-fart", enabled: self.player.sfxEnabled)
+                    }]), withKey: "after-eating")
                 }
             }
         }
         onChange?(game, justCompleted)
+    }
+    func feedChickens(at point: CGPoint, restart: Bool = false) {
+        guard restart || feedingPoint == nil else { return }
+        feedingPoint = point; feedingElapsed = 0
+        GameAudio.effect("chicken", enabled: player.sfxEnabled)
+        for index in 0..<3 {
+            guard let chicken = animals.childNode(withName: "chicken-\(index)") else { continue }
+            let goal = CGPoint(x: point.x + CGFloat(index * 35 - 35), y: point.y + CGFloat(index % 2 * 18))
+            chicken.run(.sequence([
+                .wait(forDuration: Double(index) * 0.15), .move(to: goal, duration: 0.65),
+                .repeat(.sequence([.rotate(toAngle: -0.16, duration: 0.16), .moveBy(x: 0, y: -4, duration: 0.12),
+                                   .rotate(toAngle: 0, duration: 0.16), .moveBy(x: 0, y: 4, duration: 0.12)]), count: 10)
+            ]), withKey: "feeding")
+        }
     }
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let point = touches.first?.location(in: self) else { return }
@@ -292,7 +414,19 @@ final class TaskScene: SKScene {
            }), hypot(point.x - hoofPoint(closest).x, point.y - hoofPoint(closest).y) < 43 {
             game.liftHoof(closest); render(); notify(); return
         }
-        let hit = world.nodes(at: point).first { $0.name != nil }
+        if let chicken = animals.nodes(at: point).first(where: { $0.name?.hasPrefix("chicken-") == true }) {
+            chicken.run(.sequence([.moveBy(x: 0, y: 18, duration: 0.12), .moveBy(x: 0, y: -18, duration: 0.15)]))
+            GameAudio.effect("chicken", enabled: player.sfxEnabled); return
+        }
+        var hit = world.nodes(at: point).first { $0.name != nil }
+        if let name = hit?.name, name.hasPrefix("select-"), let activity = FarmActivity(rawValue: String(name.dropFirst(7))) {
+            onSelect?(activity)
+            hit = world.nodes(at: point).first { $0.name != nil && $0.name?.hasPrefix("select-") != true }
+        }
+        if let name = hit?.name, name.hasPrefix("food-item-"), let index = Int(name.dropFirst(10)) {
+            foodVariant = index
+            hit = world.childNode(withName: "tool")
+        }
         guard let name = hit?.name else { return }
         if name.hasPrefix("chicken-") {
             hit?.run(.sequence([.moveBy(x: 0, y: 18, duration: 0.12), .moveBy(x: 0, y: -18, duration: 0.15)]))
@@ -311,10 +445,6 @@ final class TaskScene: SKScene {
         }
         if name.hasPrefix("nest-"), let index = Int(name.dropFirst(5)) {
             game.tapTarget(index); render(); notify(); return
-        }
-        if name == "tool" && game.activity == .hooves {
-            game.pickLiftedHoof(); game.progress = Double(game.hoofPicks.reduce(0, +)) / 12
-            GameAudio.effect("pick", enabled: player.sfxEnabled); render(); notify(); return
         }
         if name == "tap" { game.tapTarget(); GameAudio.effect("water", enabled: player.sfxEnabled); render(); notify(); return }
         if name == "tool" && game.activity == .fence && game.hammerAtFence {
@@ -337,10 +467,16 @@ final class TaskScene: SKScene {
         guard let point = touches.first?.location(in: self), let dragging else { return }
         dragPosition = point
         world.childNode(withName: dragging)?.position = point
+        if dragging == "tool", game.activity == .hooves, let index = game.liftedHoof, let previous = lastDrag,
+           targets["hoof-\(index)"]?.contains(point) == true, targets["hoof-\(index)"]?.contains(previous) == true {
+            game.scrubHoof(distance: Double(hypot(point.x - previous.x, point.y - previous.y)))
+            GameAudio.effect("pick", enabled: player.sfxEnabled); render(); notify()
+        }
         if dragging == "tool", game.isScrubbing, let previous = lastDrag,
            targets["destination"]?.contains(point) == true, targets["destination"]?.contains(previous) == true {
             let oldStage = game.stage
             game.scrub(distance: Double(hypot(point.x - previous.x, point.y - previous.y)))
+            if game.activity == .grain { feedChickens(at: point) }
             if oldStage != game.stage { self.dragging = nil; dragPosition = nil; lastDrag = nil }
             render()
             if oldStage != game.stage { demonstrate() }
@@ -357,7 +493,10 @@ final class TaskScene: SKScene {
         } else if targets["destination"]?.contains(point) == true {
             if name.hasPrefix("pile-"), let index = Int(name.dropFirst(5)) { game.dropAtDestination(item: index) }
             else if name.hasPrefix("egg-"), let index = Int(name.dropFirst(4)) { game.dropAtDestination(item: index) }
-            else if name == "tool" { game.dropAtDestination() }
+            else if name == "tool" {
+                game.dropAtDestination()
+                if game.activity == .treats { feedChickens(at: point, restart: true) }
+            }
         }
         dragging = nil; dragPosition = nil; lastDrag = nil
         render(); notify()
@@ -368,7 +507,7 @@ final class TaskScene: SKScene {
     private func demonstrate() {
         let hand = SKLabelNode(text: "👆"); hand.fontSize = 40; hand.zPosition = 3000; hand.position = source
         let destination: CGPoint
-        if game.activity == .manure { hand.position = pilePoint(0); destination = CGPoint(x: 175, y: 320) }
+        if game.activity == .manure { hand.position = pilePoint(0); destination = CGPoint(x: 130, y: 170) }
         else if [.eggs, .straw].contains(game.activity) { hand.position = nestPoint(0); destination = game.activity == .eggs ? CGPoint(x: 165, y: 270) : source }
         else if game.activity == .hooves { destination = hoofPoint(0) }
         else if [.stableWater, .paddockWater].contains(game.activity) { destination = bucketFillPoint }
@@ -383,13 +522,17 @@ final class TaskScene: SKScene {
         defer { previousTime = currentTime }
         guard let previous = previousTime else { return }
         let dt = min(0.1, max(0, currentTime - previous))
+        if feedingPoint != nil {
+            feedingElapsed += dt
+            if feedingElapsed >= 8 { feedingPoint = nil; render() }
+        }
         animalElapsed += dt
         if animalElapsed >= nextAnimal {
             animalElapsed = 0; nextAnimal = Double.random(in: 12...26)
             if [.eggs, .grain, .coopWater, .sweepCoop, .straw, .treats].contains(game.activity) {
                 GameAudio.effect("chicken", enabled: player.sfxEnabled)
             } else if ![.manure, .trough, .fence].contains(game.activity) {
-                let sound = Int.random(in: 0..<12) == 0 ? "horse-fart" : "horse-\(Int.random(in: 1...3))"
+                let sound = "horse-\(Int.random(in: 1...3))"
                 GameAudio.effect(sound, enabled: player.sfxEnabled); horse.flickTail()
             }
         }

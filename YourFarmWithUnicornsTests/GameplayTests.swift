@@ -1,11 +1,35 @@
 import XCTest
 #if canImport(UIKit)
 import UIKit
+import SpriteKit
 #endif
 @testable import YourFarmWithUnicorns
 
 final class GameplayTests: XCTestCase {
     #if canImport(UIKit)
+    @MainActor func testSceneObjectsStayPresentAndChickenFeedingSurvivesTaskChanges() throws {
+        let player = Player(name: "Scene test", rider: .girl, palette: .green)
+        let view = SKView(frame: CGRect(x: 0, y: 0, width: 1000, height: 580))
+        let paddock = TaskScene(player: player, activity: .manure)
+        paddock.didMove(to: view)
+        let trough = try XCTUnwrap(paddock.childNode(withName: "//select-trough"))
+        let location = trough.position
+        XCTAssertNotNil(paddock.childNode(withName: "//select-paddockWater"))
+        XCTAssertNotNil(paddock.childNode(withName: "//select-fence"))
+        paddock.choose(.trough)
+        let selected = try XCTUnwrap(paddock.childNode(withName: "//destination"))
+        XCTAssertEqual(selected.position, location)
+        let coop = TaskScene(player: player, activity: .eggs)
+        coop.didMove(to: view)
+        XCTAssertNotNil(coop.childNode(withName: "//select-grain"))
+        XCTAssertNotNil(coop.childNode(withName: "//select-coopWater"))
+        let bird = try XCTUnwrap(coop.childNode(withName: "//chicken-0"))
+        coop.feedChickens(at: CGPoint(x: 600, y: 235))
+        XCTAssertTrue(bird.hasActions())
+        coop.choose(.straw); coop.updatePlayer(player)
+        XCTAssertTrue(coop.childNode(withName: "//chicken-0") === bird)
+        XCTAssertTrue(bird.hasActions(), "Scene updates must not discard a feeding chicken")
+    }
     @MainActor func testEveryBundledHorseSilhouetteAndEnvironmentDecodes() throws {
         for sheet in ["HorseBodySheet", "HorseOverheadSheet", "UnicornOverheadSheet"] {
             for horse in HorseCatalog.all {
@@ -21,6 +45,12 @@ final class GameplayTests: XCTestCase {
                 XCTAssertGreaterThan(image.size.height, 300)
             } }
         }
+        for horse in HorseCatalog.all {
+            for direction in RideFacing.allCases {
+                let image = try XCTUnwrap(GameArt.silhouette(sheet: "HorseRide-\(horse.id)", index: direction.rawValue, columns: 4, rows: 2))
+                XCTAssertGreaterThan(image.size.height, 100)
+            }
+        }
         XCTAssertNotNil(GameArt.silhouette(sheet: "UnicornWing", index: 0, columns: 1, rows: 1))
         XCTAssertNotNil(UIImage(named: "UnicornBrand"))
     }
@@ -28,6 +58,15 @@ final class GameplayTests: XCTestCase {
     private let day = Date(timeIntervalSince1970: 1_720_000_000)
     private var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian); calendar.timeZone = TimeZone(secondsFromGMT: 0)!; return calendar
+    }
+    func testUnselectedActivitiesExposeTheirExistingEntryState() {
+        var entry = ChoreEntry(activity: .trough, brokenFence: true)
+        entry.current.scrub(distance: 80)
+        let progress = entry.current.progress
+        entry.select(.manure, tack: Tack())
+        XCTAssertEqual(entry.state(for: .trough, tack: Tack()).progress, progress)
+        XCTAssertTrue(entry.state(for: .fence, tack: Tack()).brokenFence)
+        XCTAssertEqual(entry.current.activity, .manure, "Reading scene objects must not select a task")
     }
     func testThreeDistinctStableActivitiesAwardOnlyOneRibbon() {
         var player = Player(name: "Child", rider: .girl, palette: .pink)
@@ -125,7 +164,9 @@ final class GameplayTests: XCTestCase {
         var game = ChoreGame(activity: .hooves)
         for index in 0..<4 {
             game.liftHoof(index); XCTAssertEqual(game.liftedHoof, index)
-            for _ in 0..<3 { game.pickLiftedHoof() }
+            game.scrubHoof(distance: .nan)
+            XCTAssertEqual(game.hoofPicks[index], 0)
+            for _ in 0..<3 { game.scrubHoof(distance: 60) }
             XCTAssertEqual(game.hoofPicks[index], 3)
         }
         XCTAssertTrue(game.completed); XCTAssertEqual(game.collection.count, 4)

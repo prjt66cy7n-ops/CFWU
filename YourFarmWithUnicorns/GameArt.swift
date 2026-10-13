@@ -20,12 +20,25 @@ extension Palette {
 // Atlas regions are rendered in memory. Source sheets stay intact; later
 // production atlases can replace these images without changing stable horse IDs.
 enum GameArt {
+    private static let atlasRects: [String: [[Int]]] = {
+        guard let url = Bundle.main.url(forResource: "atlas-regions", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let rects = try? JSONDecoder().decode([String: [[Int]]].self, from: data) else { return [:] }
+        return rects
+    }()
     private static let cache = NSCache<NSString, UIImage>()
     // Inset equal atlas cells to exclude the painted sheet's separating gutter.
     static func environment(sheet: String, column: Int, row: Int) -> UIImage? {
         let key = "environment-\(sheet)-\(column)-\(row)" as NSString
         if let image = cache.object(forKey: key) { return image }
-        guard let image = region(sheet: sheet, column: column, row: row, columns: 2, rows: 2),
+        let image: UIImage?
+        if sheet == "FarmEnvironmentSheet", let full = UIImage(named: sheet)?.cgImage {
+            let y = row == 0 ? 0 : 474
+            let height = row == 0 ? 466 : full.height - 474
+            image = full.cropping(to: CGRect(x: CGFloat(column * (full.width / 2) + 8), y: CGFloat(y),
+                                             width: CGFloat(full.width / 2 - 16), height: CGFloat(height))).map { UIImage(cgImage: $0) }
+        } else { image = region(sheet: sheet, column: column, row: row, columns: 2, rows: 2) }
+        guard let image,
               let full = image.cgImage,
               let cropped = full.cropping(to: CGRect(x: 8, y: 8, width: CGFloat(full.width - 16), height: CGFloat(full.height - 16))) else { return nil }
         let result = UIImage(cgImage: cropped); cache.setObject(result, forKey: key)
@@ -68,17 +81,72 @@ enum GameArt {
         return result
     }
     static func region(sheet: String, column: Int, row: Int, columns: Int, rows: Int) -> UIImage? {
-        let key = "\(sheet)-\(column)-\(row)" as NSString
+        let key = "\(sheet)-\(column)-\(row)-\(columns)-\(rows)" as NSString
         if let image = cache.object(forKey: key) { return image }
         guard let full = UIImage(named: sheet)?.cgImage else { return nil }
         let x = Int(Double(full.width) * Double(column) / Double(columns))
         let y = Int(Double(full.height) * Double(row) / Double(rows))
         let right = Int(Double(full.width) * Double(column + 1) / Double(columns))
         let bottom = Int(Double(full.height) * Double(row + 1) / Double(rows))
-        guard let cropped = full.cropping(to: CGRect(x: CGFloat(x), y: CGFloat(y), width: CGFloat(right - x), height: CGFloat(bottom - y))) else { return nil }
-        let image = UIImage(cgImage: cropped)
+        var rect = CGRect(x: CGFloat(x), y: CGFloat(y), width: CGFloat(right - x), height: CGFloat(bottom - y))
+        let index = row * columns + column
+        if let entries = atlasRects[sheet], entries.indices.contains(index), entries[index].count == 4 {
+            let box = entries[index]
+            rect = CGRect(x: CGFloat(box[0]), y: CGFloat(box[1]), width: CGFloat(box[2]), height: CGFloat(box[3]))
+        }
+        guard let cropped = full.cropping(to: rect) else { return nil }
+        let image = sheet.hasSuffix("EnvironmentSheet") ? UIImage(cgImage: cropped) : cleanSprite(cropped)
         cache.setObject(image, forKey: key)
         return image
+    }
+    // A grid crop may include disconnected pieces of its neighbours. Keep the
+    // primary connected silhouette, then crop its transparent margins. Source
+    // masters remain intact and intentional texture details stay within the body.
+    private static func cleanSprite(_ source: CGImage) -> UIImage {
+        if source.alphaInfo == .none || source.alphaInfo == .noneSkipLast || source.alphaInfo == .noneSkipFirst {
+            return UIImage(cgImage: source)
+        }
+        let width = source.width, height = source.height
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        let result = pixels.withUnsafeMutableBytes { buffer -> UIImage? in
+            guard let context = CGContext(data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8,
+                                          bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                                          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+                  let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return nil }
+            context.draw(source, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
+            var labels = [Int32](repeating: 0, count: width * height)
+            var label: Int32 = 0, largest: Int32 = 0, largestSize = 0
+            var queue: [Int] = []; queue.reserveCapacity(width * height / 2)
+            for start in 0..<(width * height) where labels[start] == 0 && bytes[start * 4 + 3] > 24 {
+                label += 1; queue.removeAll(keepingCapacity: true); queue.append(start); labels[start] = label
+                var cursor = 0
+                while cursor < queue.count {
+                    let point = queue[cursor]; cursor += 1
+                    let x = point % width, y = point / width
+                    for adjacent in [x > 0 ? point - 1 : -1, x + 1 < width ? point + 1 : -1,
+                                     y > 0 ? point - width : -1, y + 1 < height ? point + width : -1] {
+                        if adjacent >= 0 && labels[adjacent] == 0 && bytes[adjacent * 4 + 3] > 24 {
+                            labels[adjacent] = label; queue.append(adjacent)
+                        }
+                    }
+                }
+                if queue.count > largestSize { largestSize = queue.count; largest = label }
+            }
+            guard largestSize > 0 else { return nil }
+            var left = width, right = 0, top = height, bottom = 0
+            for index in labels.indices {
+                if labels[index] != largest {
+                    for channel in 0..<4 { bytes[index * 4 + channel] = 0 }
+                } else {
+                    left = min(left, index % width); right = max(right, index % width)
+                    top = min(top, index / width); bottom = max(bottom, index / width)
+                }
+            }
+            guard let full = context.makeImage(), let crop = full.cropping(to:
+                CGRect(x: CGFloat(left), y: CGFloat(top), width: CGFloat(right - left + 1), height: CGFloat(bottom - top + 1))) else { return nil }
+            return UIImage(cgImage: crop)
+        }
+        return result ?? UIImage(cgImage: source)
     }
     static func horse(_ horse: Horse) -> UIImage? {
         region(sheet: "HorsePortraitSheet", column: horse.portraitIndex % 4, row: horse.portraitIndex / 4, columns: 4, rows: 4)

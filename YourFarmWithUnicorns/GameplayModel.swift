@@ -119,6 +119,7 @@ struct ChoreGame {
     var revealed: Set<Int> = []
     var liftedHoof: Int?
     var hoofPicks = [0, 0, 0, 0]
+    var hoofCleaning = [0.0, 0.0, 0.0, 0.0]
     var bucketAtTap = false
     var hammerAtFence = false
     var bucketFull = false
@@ -150,13 +151,7 @@ struct ChoreGame {
         case .manure: if (0..<5).contains(index), !collection.contains(index) { revealed.insert(index) }
         case .eggs: if (0..<4).contains(index), !collection.contains(index) { revealed.insert(index) }
         case .straw: if (0..<4).contains(index), !collection.contains(index) { revealed.insert(index) }
-        case .hooves:
-            guard (0..<4).contains(index), hoofPicks[index] < 3 else { return }
-            if liftedHoof == index {
-                hoofPicks[index] += 1
-                if hoofPicks[index] == 3 { collection.insert(index); liftedHoof = nil }
-                if collection.count == 4 { completed = true }
-            } else { liftedHoof = index }
+        case .hooves: liftHoof(index)
         case .stableWater, .paddockWater: if bucketAtTap { bucketFull = true }
         case .trough: if stage == 1 { progress = 1; completed = true }
         case .fence:
@@ -168,9 +163,16 @@ struct ChoreGame {
         guard activity == .hooves, !completed, (0..<4).contains(index), hoofPicks[index] < 3 else { return }
         liftedHoof = index
     }
-    mutating func pickLiftedHoof() {
-        guard activity == .hooves, let index = liftedHoof else { return }
-        tapTarget(index)
+    mutating func scrubHoof(distance: Double) {
+        guard activity == .hooves, !completed, let index = liftedHoof,
+              distance.isFinite, distance > 0 else { return }
+        hoofCleaning[index] = min(1, hoofCleaning[index] + min(distance, 60) / 180)
+        hoofPicks[index] = Int(hoofCleaning[index] * 3)
+        progress = hoofCleaning.reduce(0, +) / 4
+        if hoofCleaning[index] >= 1 {
+            collection.insert(index); liftedHoof = nil
+            completed = collection.count == 4
+        }
     }
     mutating func dropAtTap() {
         guard [.stableWater, .paddockWater].contains(activity), !completed else { return }
@@ -209,6 +211,10 @@ struct ChoreEntry {
     init(activity: FarmActivity, tack: Tack = Tack(), brokenFence: Bool = true) {
         self.brokenFence = brokenFence
         current = ChoreGame(activity: activity, tack: tack, brokenFence: brokenFence)
+    }
+    func state(for activity: FarmActivity, tack: Tack) -> ChoreGame {
+        if current.activity == activity { return current }
+        return states[activity] ?? ChoreGame(activity: activity, tack: tack, brokenFence: brokenFence)
     }
     mutating func select(_ activity: FarmActivity, tack: Tack) {
         states[current.activity] = current

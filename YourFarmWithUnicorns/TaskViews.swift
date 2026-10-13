@@ -11,6 +11,7 @@ final class TaskSession: ObservableObject {
         let first = area.activities[0]
         selected = first; scene = TaskScene(player: player, activity: first)
         guide = scene.guide
+        scene.onSelect = { [weak self] in self?.select($0) }
         scene.onChange = { [weak self] state, justCompleted in
             guard let self else { return }
             self.progress = state.progress; self.guide = self.scene.guide
@@ -63,8 +64,13 @@ struct FarmTasksScreen: View {
             ProgressView(value: session.progress).tint(.green).accessibilityLabel("Activity progress")
             if session.selected == .feed {
                 HStack {
-                    ForEach(Array(["🥕", "🍎", "🍬", "🌾"].enumerated()), id: \.offset) { index, icon in
-                        Button { session.scene.foodVariant = index } label: { Text(icon).font(.title2) }
+                    ForEach(Array(["🥕", "🍎", "Liquorice", "🌾"].enumerated()), id: \.offset) { index, icon in
+                        Button { session.scene.foodVariant = index } label: {
+                            if index == 2 {
+                                Capsule().fill(Color(red: 0.12, green: 0.08, blue: 0.05)).frame(width: 36, height: 9)
+                                    .rotationEffect(.degrees(-12)).frame(width: 44, height: 36)
+                            } else { Text(icon).font(.title2) }
+                        }.accessibilityLabel(["Carrot", "Apple", "Liquorice stick", "Hay"][index])
                     }
                 }
             } else if session.selected == .treats {

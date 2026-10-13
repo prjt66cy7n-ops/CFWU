@@ -12,32 +12,22 @@ final class RidingScene: SKScene {
     private var nextAnimal = Double.random(in: 12...24)
     var onProgress: ((Int, String?, [String]) -> Void)?
     private let horse: HorseNode
+    private let horseSize: Double
     private let obstacles = SKNode()
     private var lastTime: TimeInterval?
     private var animationTime = 0.0
     init(player: Player, mode: Mode) {
-        self.mode = mode; horse = HorseNode(player: player); soundEnabled = player.sfxEnabled
+        self.mode = mode; horseSize = player.horse.size.scale; horse = HorseNode(player: player); soundEnabled = player.sfxEnabled
         super.init(size: CGSize(width: ArenaRide.width, height: ArenaRide.height))
+        horse.enableAngledRiding(player: player)
         scaleMode = .aspectFit
         backgroundColor = UIColor(red: 0.71, green: 0.84, blue: 0.57, alpha: 1)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
     override func didMove(to view: SKView) {
         removeAllChildren()
-        let footing = SKShapeNode(rectOf: CGSize(width: 910, height: 530), cornerRadius: mode == .arena ? 90 : 240)
-        footing.position = CGPoint(x: 500, y: 310)
-        footing.fillColor = UIColor(red: 0.95, green: 0.79, blue: 0.54, alpha: 1)
-        footing.strokeColor = .brown; footing.lineWidth = 10; addChild(footing)
-        for i in 0..<12 {
-            let angle = Double(i) / 12 * .pi * 2
-            let post = SKShapeNode(rectOf: CGSize(width: 9, height: 20), cornerRadius: 2)
-            post.position = CGPoint(x: 500 + cos(angle) * 448, y: 310 + sin(angle) * 259)
-            post.fillColor = .brown; post.strokeColor = .clear; addChild(post)
-        }
         if let background = GameArt.background(sheet: "FarmEnvironmentSheet", column: mode == .arena ? 0 : 1, row: 0, size: size) {
-            // Keep the model's whole playable footprint visible over the scenery.
-            addChild(background); footing.fillColor = footing.fillColor.withAlphaComponent(0.4)
-            footing.strokeColor = footing.strokeColor.withAlphaComponent(0.3)
+            addChild(background)
         }
         obstacles.zPosition = 1; addChild(obstacles); addChild(horse)
         rebuildEquipment()
@@ -78,14 +68,21 @@ final class RidingScene: SKScene {
     }
     private func renderHorse() {
         if mode == .arena {
-            horse.render(point: arena.position, facing: arena.facing, gait: arena.gait,
+            horse.setScale(CGFloat(horseSize * (0.9 + 0.25 * (1 - arena.position.y / 620))))
+            horse.render(point: projected(arena.position), facing: arena.facing, gait: arena.gait,
                          moving: joystick.length > 0.04 || arena.isJumping, time: animationTime, jumpHeight: arena.jumpHeight)
         } else {
             let polePhase = abs(sin(yard.angle * 2))
-            horse.render(point: yard.position, facing: yard.facing, gait: yard.gait,
+            horse.setScale(CGFloat(horseSize * (0.9 + 0.25 * (1 - yard.position.y / 620))))
+            horse.render(point: projected(yard.position), facing: yard.facing, gait: yard.gait,
                          moving: yard.speedMultiplier > 0.05, time: animationTime,
                          jumpHeight: yard.polesEnabled && polePhase < 0.18 ? 4 : 0)
         }
+    }
+    private func projected(_ point: RidePoint) -> RidePoint {
+        let depth = min(1, max(0, point.y / 620))
+        let width = 1 - depth * 0.22
+        return RidePoint(x: 500 + (point.x - 500) * width + (point.y - 310) * 0.12, y: 100 + point.y * 0.5)
     }
     private func rebuildEquipment() {
         obstacles.removeAllChildren()
@@ -94,53 +91,51 @@ final class RidingScene: SKScene {
             let next = arena.course.jumps.first { !arena.completedJumps.contains($0.id) }
             for jump in arena.course.jumps {
                 let item = SKNode(); item.name = "pole-\(jump.id)"
-                item.position = CGPoint(x: jump.center.x, y: jump.center.y)
-                item.zRotation = CGFloat(atan2(jump.normal.y, jump.normal.x) - .pi / 2)
+                let center = projected(jump.center)
+                item.position = CGPoint(x: center.x, y: center.y)
+                item.zPosition = CGFloat(700 - center.y)
+                let tangent = RidePoint(x: -jump.normal.y * jump.halfWidth, y: jump.normal.x * jump.halfWidth)
+                let start = projected(jump.center + tangent), end = projected(jump.center - tangent)
+                let a = CGPoint(x: start.x - center.x, y: start.y - center.y)
+                let b = CGPoint(x: end.x - center.x, y: end.y - center.y)
                 let color = arena.courseIndex == 2 ? UIColor.systemGreen : colors[jump.id % colors.count]
                 let fallen = arena.fallenPoles.contains(jump.id)
-                if next?.id == jump.id {
-                    let glow = SKShapeNode(ellipseOf: CGSize(width: 158, height: 96))
-                    glow.fillColor = .clear; glow.strokeColor = .systemYellow; glow.lineWidth = 5
-                    item.addChild(glow)
-                    glow.run(.repeatForever(.sequence([.fadeAlpha(to: 0.3, duration: 0.6), .fadeAlpha(to: 1, duration: 0.6)])))
-                    // Approach arrows point across the pole, rather than along it.
-                    for y in [-64.0, 64.0] {
-                        let arrow = SKLabelNode(text: y < 0 ? "↑" : "↓")
-                        arrow.fontSize = 25; arrow.fontColor = .brown
-                        arrow.position = CGPoint(x: 0, y: y - 8); item.addChild(arrow)
+                for point in [a, b] {
+                    let upright = SKShapeNode(rectOf: CGSize(width: 10, height: 44), cornerRadius: 2)
+                    upright.position = CGPoint(x: point.x, y: point.y + 22)
+                    upright.fillColor = .white; upright.strokeColor = color; upright.lineWidth = 3; item.addChild(upright)
+                    let flowers = SKShapeNode(ellipseOf: CGSize(width: 18, height: 9))
+                    flowers.position = point; flowers.fillColor = .systemPink; flowers.strokeColor = .systemGreen; item.addChild(flowers)
+                }
+                for height: CGFloat in [14, 34] {
+                    let path = CGMutablePath(); path.move(to: CGPoint(x: a.x, y: a.y + (fallen ? 2 : height)))
+                    path.addLine(to: CGPoint(x: b.x, y: b.y + (fallen ? 2 : height)))
+                    let rail = SKShapeNode(path: path); rail.lineWidth = 7; rail.strokeColor = color; item.addChild(rail)
+                    for index in 0..<5 {
+                        let t = CGFloat(index) / 5
+                        let stripe = CGMutablePath()
+                        stripe.move(to: CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t + (fallen ? 2 : height)))
+                        stripe.addLine(to: CGPoint(x: a.x + (b.x - a.x) * (t + 0.09), y: a.y + (b.y - a.y) * (t + 0.09) + (fallen ? 2 : height)))
+                        let white = SKShapeNode(path: stripe); white.strokeColor = .white; white.lineWidth = 7; item.addChild(white)
                     }
                 }
-                for side in [-1.0, 1.0] {
-                    let upright = SKShapeNode(rectOf: CGSize(width: 12, height: 28), cornerRadius: 3)
-                    upright.position.x = CGFloat(side * jump.halfWidth); upright.fillColor = .white
-                    upright.strokeColor = color; upright.lineWidth = 3; item.addChild(upright)
-                    let flowers = SKShapeNode(circleOfRadius: 9)
-                    flowers.position = CGPoint(x: side * (jump.halfWidth + 4), y: -20)
-                    flowers.fillColor = .systemPink; flowers.strokeColor = .systemGreen; item.addChild(flowers)
-                }
-                let rail = SKShapeNode(rectOf: CGSize(width: jump.halfWidth * 2, height: 10), cornerRadius: 3)
-                rail.fillColor = color; rail.strokeColor = .white; rail.lineWidth = 2
-                rail.name = item.name
-                if fallen { rail.position.y = -24; rail.zRotation = 0.18 }
-                item.addChild(rail)
-                for i in 0..<5 {
-                    let stripe = SKShapeNode(rectOf: CGSize(width: 10, height: 9))
-                    stripe.position.x = CGFloat(Double(i) * 24 - 48); stripe.fillColor = .white
-                    stripe.strokeColor = .clear; rail.addChild(stripe)
+                if next?.id == jump.id {
+                    let glow = SKShapeNode(ellipseOf: CGSize(width: 160, height: 65))
+                    glow.fillColor = .clear; glow.strokeColor = .systemYellow; glow.lineWidth = 3; item.addChild(glow)
                 }
                 if arena.completedJumps.contains(jump.id) {
-                    let tick = SKLabelNode(text: "✓"); tick.fontSize = 24; tick.fontColor = .systemGreen
-                    tick.position = CGPoint(x: jump.halfWidth + 22, y: 0); item.addChild(tick)
+                    let tick = SKLabelNode(text: "✓"); tick.fontColor = .systemGreen; tick.fontSize = 22
+                    tick.position = CGPoint(x: b.x + 15, y: b.y + 45); item.addChild(tick)
                 }
                 obstacles.addChild(item)
             }
         } else if yard.polesEnabled {
             for index in 0..<4 {
                 let angle = Double(index) * .pi / 2
-                let pole = SKShapeNode(rectOf: CGSize(width: 70, height: 8), cornerRadius: 3)
-                pole.position = CGPoint(x: 500 + cos(angle) * 280, y: 310 + sin(angle) * 215)
-                pole.zRotation = CGFloat(angle); pole.fillColor = .systemBlue; pole.strokeColor = .white
-                pole.lineWidth = 2; obstacles.addChild(pole)
+                let point = projected(RidePoint(x: 500 + cos(angle) * 280, y: 310 + sin(angle) * 215))
+                let pole = SKShapeNode(rectOf: CGSize(width: 65, height: 7), cornerRadius: 3)
+                pole.position = CGPoint(x: point.x, y: point.y); pole.zRotation = CGFloat(angle * 0.4)
+                pole.fillColor = .systemBlue; pole.strokeColor = .white; pole.lineWidth = 2; obstacles.addChild(pole)
             }
         }
     }
