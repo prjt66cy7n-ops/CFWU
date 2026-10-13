@@ -20,5 +20,5 @@ for number, (food, start, bite_volume, chew_volume) in enumerate([
                     '-map', '[out]', '-ar', '44100', '-ac', '1', '-c:a', 'pcm_s16le',
                     str(DEST / f'sfx-crunch-{food}.wav')], check=True)
 subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', str(SOURCES / 'rubberduck-water-flowing.m4a'),
-                '-ar', '44100', '-ac', '1', '-c:a', 'pcm_s16le', str(DEST / 'sfx-water.wav')], check=True)
+                '-af', 'volume=8', '-ar', '44100', '-ac', '1', '-c:a', 'pcm_s16le', str(DEST / 'sfx-water.wav')], check=True)
 print('Prepared four recorded chewing/crunch variants and a licensed flowing-water loop.')

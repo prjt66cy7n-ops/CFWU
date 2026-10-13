@@ -36,7 +36,7 @@ Licence: https://creativecommons.org/publicdomain/zero/1.0/
 Retrieved file and explicit pack licence/attribution manifest:
 https://github.com/novincode/atomcut-library/tree/391f87ff50bdad7645f9007708fef8ff07c8a00a/packs/opengameart-30-cc0-sfx-loops
 File: `audio/water-flowing.m4a`, originally `sfx-loops/water_flowing.ogg`.
-Changes: mono 44.1 kHz PCM conversion. Playback loops continuously during
+Changes: level boosted by 18 dB and mono 44.1 kHz PCM conversion. Playback loops continuously during
 water flow and stops when filling stops. The source labels this as a nature
 water loop; no claim is made about its original recording method.
 
