@@ -56,19 +56,6 @@ for i in range(1, 4):
 write('sfx-horse-fart', 0.3, lambda t: 0.14 * math.sin(t * 2 * math.pi * 65) * (0.5 + 0.5 * math.sin(t * 170)) * math.exp(-t * 10))
 print('Generated 9 original instrumental music tracks and 10 synthetic feedback/animal clips.')
 
-# Food-specific original crunch/chew textures, kept reproducible with fixed seeds.
-for food_index, food_name in enumerate(['carrot', 'apple', 'liquorice', 'hay']):
-    eating_rng = random.Random(660 + food_index)
-    previous_noise = [0.0]
-    def crunch(t, index=food_index, rng=eating_rng, previous=previous_noise):
-        age = t % 0.28
-        envelope = math.exp(-age * (23 if index == 0 else 16)) * (1 - math.exp(-age * 400))
-        noise = rng.uniform(-1, 1); high = noise - previous[0]; previous[0] = noise
-        frequency = [2600, 950, 450, 3400][index]
-        sound = 0.28 * high + 0.1 * math.sin(t * 2 * math.pi * frequency)
-        if index == 1: sound = 0.22 * noise + 0.15 * math.sin(2 * math.pi * 380 * t) * math.exp(-age * 8)
-        if index == 2: sound = 0.12 * noise + 0.14 * math.sin(2 * math.pi * frequency * t) * (0.5 + 0.5 * math.sin(110 * t))
-        if index == 3: sound = 0.22 * high * (0.6 + 0.4 * math.sin(260 * t))
-        return sound * envelope
-    write('sfx-crunch-' + food_name, 1.25, crunch)
-print('Generated four food-specific eating clips.')
+# Keep the dedicated eating generator shared with selective asset regeneration.
+import runpy
+runpy.run_path(str(Path(__file__).with_name('generate-eating-audio.py')))

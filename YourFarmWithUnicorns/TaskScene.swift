@@ -403,7 +403,9 @@ final class TaskScene: SKScene {
         let justCompleted = game.completed && !reportedCompletion
         if justCompleted {
             reportedCompletion = true
-            GameAudio.effect("task", enabled: player.sfxEnabled)
+            if ![.feed, .hay].contains(game.activity) {
+                GameAudio.effect("task", enabled: player.sfxEnabled)
+            }
             if [.feed, .stableWater, .paddockWater, .hay].contains(game.activity) {
                 if game.activity == .hay { horse.run(.move(to: CGPoint(x: 495, y: 325), duration: 0.7)) }
                 horse.eat()
@@ -414,7 +416,7 @@ final class TaskScene: SKScene {
                 let sound = game.activity == .hay ? "hay" : ["carrot", "apple", "liquorice", "hay"][foodVariant % 4]
                 GameAudio.effect("crunch-\(sound)", enabled: player.sfxEnabled)
                 if Int.random(in: 0..<5) == 0 {
-                    run(.sequence([.wait(forDuration: Double.random(in: 2...4)), .run { [weak self] in
+                    run(.sequence([.wait(forDuration: Double.random(in: 4...6)), .run { [weak self] in
                         guard let self else { return }
                         GameAudio.effect("horse-fart", enabled: self.player.sfxEnabled)
                     }]), withKey: "after-eating")
