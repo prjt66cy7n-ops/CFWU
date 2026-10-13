@@ -21,9 +21,9 @@ struct FarmRootView: View {
             Color(red: 0.84, green: 0.92, blue: 0.73).ignoresSafeArea()
             if let player = game.active {
                 VStack(spacing: 8) {
-                    header(player)
+                    header(player).zIndex(10)
                     RibbonRow(player: player)
-                    playArea(player)
+                    playArea(player).contentShape(Rectangle()).clipped()
                     Text("Your Farm With Unicorns").font(.caption2).foregroundColor(.secondary)
                 }.padding(16)
             } else {
