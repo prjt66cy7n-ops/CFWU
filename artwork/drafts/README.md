@@ -96,3 +96,34 @@ These new paintings interpret the supplied concept direction; they are not ident
 
 ![UnicornWing](UnicornWing.png)
 
+
+## Angled riding poses
+
+Eight facings for each horse use a raised three-quarter camera with visible legs. Runtime atlas extraction follows complete silhouettes instead of uniform grid cuts.
+
+![HorseRide-biscuit](../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-biscuit.imageset/HorseRide-biscuit.png)
+
+![HorseRide-bruno](../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-bruno.imageset/HorseRide-bruno.png)
+
+![HorseRide-daisy](../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-daisy.imageset/HorseRide-daisy.png)
+
+![HorseRide-dusty](../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-dusty.imageset/HorseRide-dusty.png)
+
+![HorseRide-luna](../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-luna.imageset/HorseRide-luna.png)
+
+![HorseRide-maple](../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-maple.imageset/HorseRide-maple.png)
+
+![HorseRide-misty](../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-misty.imageset/HorseRide-misty.png)
+
+![HorseRide-oreo](../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-oreo.imageset/HorseRide-oreo.png)
+
+![HorseRide-pebbles](../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-pebbles.imageset/HorseRide-pebbles.png)
+
+![HorseRide-poppy](../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-poppy.imageset/HorseRide-poppy.png)
+
+![HorseRide-roo](../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-roo.imageset/HorseRide-roo.png)
+
+![HorseRide-snowy](../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-snowy.imageset/HorseRide-snowy.png)
+
+![HorseRide-sunny](../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-sunny.imageset/HorseRide-sunny.png)
+

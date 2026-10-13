@@ -231,5 +231,148 @@
     "status": "bundled-rig-sheet",
     "has_transparency": true,
     "sha256": "0cdb4df8e0e1817c2d8575a38c03b95edb15741ee50c55feab03452a6d6643c6"
+  },
+  {
+    "file": "../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-biscuit.imageset/HorseRide-biscuit.png",
+    "title": "HorseRide-biscuit angled riding poses",
+    "width": 1774,
+    "height": 887,
+    "columns": 4,
+    "rows": 2,
+    "status": "bundled-angled-riding-sheet",
+    "has_transparency": true,
+    "sha256": "a9b3f225d428abd59ea96d992a4446d1d5f13fb98def4936fc1c44436a45d3bf"
+  },
+  {
+    "file": "../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-bruno.imageset/HorseRide-bruno.png",
+    "title": "HorseRide-bruno angled riding poses",
+    "width": 1774,
+    "height": 887,
+    "columns": 4,
+    "rows": 2,
+    "status": "bundled-angled-riding-sheet",
+    "has_transparency": true,
+    "sha256": "e81b1857b2b1a262e432405d8197d5d7a5a7fb0ccb8c39a06bd5f14f53296949"
+  },
+  {
+    "file": "../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-daisy.imageset/HorseRide-daisy.png",
+    "title": "HorseRide-daisy angled riding poses",
+    "width": 1774,
+    "height": 887,
+    "columns": 4,
+    "rows": 2,
+    "status": "bundled-angled-riding-sheet",
+    "has_transparency": true,
+    "sha256": "4e6221fdccd302be780da7a88671cfdf1bf80d2eb300203691d0b309281bd1b3"
+  },
+  {
+    "file": "../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-dusty.imageset/HorseRide-dusty.png",
+    "title": "HorseRide-dusty angled riding poses",
+    "width": 1774,
+    "height": 887,
+    "columns": 4,
+    "rows": 2,
+    "status": "bundled-angled-riding-sheet",
+    "has_transparency": true,
+    "sha256": "401c1c3dd04279fbbe4678fb9a250808abc0412b0d833af4729bf7254f9e3fc6"
+  },
+  {
+    "file": "../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-luna.imageset/HorseRide-luna.png",
+    "title": "HorseRide-luna angled riding poses",
+    "width": 1774,
+    "height": 887,
+    "columns": 4,
+    "rows": 2,
+    "status": "bundled-angled-riding-sheet",
+    "has_transparency": true,
+    "sha256": "d238166e3ee7de8722b21b2d762c634621d721516117fa788334d8ce30a30a08"
+  },
+  {
+    "file": "../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-maple.imageset/HorseRide-maple.png",
+    "title": "HorseRide-maple angled riding poses",
+    "width": 1774,
+    "height": 887,
+    "columns": 4,
+    "rows": 2,
+    "status": "bundled-angled-riding-sheet",
+    "has_transparency": true,
+    "sha256": "930c9ec996c35ac745f9d5a8045444b85a4a8a2e48c17e93d21d633525bdfa7c"
+  },
+  {
+    "file": "../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-misty.imageset/HorseRide-misty.png",
+    "title": "HorseRide-misty angled riding poses",
+    "width": 1774,
+    "height": 887,
+    "columns": 4,
+    "rows": 2,
+    "status": "bundled-angled-riding-sheet",
+    "has_transparency": true,
+    "sha256": "b69133867fe5fe5593ca855e25dc296c335f6cbacebcf2462e22d29bc5755825"
+  },
+  {
+    "file": "../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-oreo.imageset/HorseRide-oreo.png",
+    "title": "HorseRide-oreo angled riding poses",
+    "width": 1774,
+    "height": 887,
+    "columns": 4,
+    "rows": 2,
+    "status": "bundled-angled-riding-sheet",
+    "has_transparency": true,
+    "sha256": "52aa9e6246c594198603347ef5286000ae59b96fd1cbaed54bbbeaf7dc89f339"
+  },
+  {
+    "file": "../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-pebbles.imageset/HorseRide-pebbles.png",
+    "title": "HorseRide-pebbles angled riding poses",
+    "width": 1774,
+    "height": 887,
+    "columns": 4,
+    "rows": 2,
+    "status": "bundled-angled-riding-sheet",
+    "has_transparency": true,
+    "sha256": "dce3e6bd7ae9e3d16394b82ac1a5a3327bc54085880514aa75f4dfaa2bd2906e"
+  },
+  {
+    "file": "../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-poppy.imageset/HorseRide-poppy.png",
+    "title": "HorseRide-poppy angled riding poses",
+    "width": 1774,
+    "height": 887,
+    "columns": 4,
+    "rows": 2,
+    "status": "bundled-angled-riding-sheet",
+    "has_transparency": true,
+    "sha256": "a98dc4a0e30f688132aba88aaa70b6153a4a3dd6403fb16de7ac62f55763246d"
+  },
+  {
+    "file": "../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-roo.imageset/HorseRide-roo.png",
+    "title": "HorseRide-roo angled riding poses",
+    "width": 1774,
+    "height": 887,
+    "columns": 4,
+    "rows": 2,
+    "status": "bundled-angled-riding-sheet",
+    "has_transparency": true,
+    "sha256": "9ec098b3ea68f246927328f9a4758b0d7e90b5aeb653f94aaead9a92982bfa27"
+  },
+  {
+    "file": "../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-snowy.imageset/HorseRide-snowy.png",
+    "title": "HorseRide-snowy angled riding poses",
+    "width": 1774,
+    "height": 887,
+    "columns": 4,
+    "rows": 2,
+    "status": "bundled-angled-riding-sheet",
+    "has_transparency": true,
+    "sha256": "a46ef0918b3412a69042bf1fce46dbf50bb4f09451f36c540b1d0679173f165d"
+  },
+  {
+    "file": "../../YourFarmWithUnicorns/Assets.xcassets/HorseRide-sunny.imageset/HorseRide-sunny.png",
+    "title": "HorseRide-sunny angled riding poses",
+    "width": 1774,
+    "height": 887,
+    "columns": 4,
+    "rows": 2,
+    "status": "bundled-angled-riding-sheet",
+    "has_transparency": true,
+    "sha256": "7dfd2d447311fec700f919b3357b20b25fea122890339fe8f81f080799756049"
   }
 ]
