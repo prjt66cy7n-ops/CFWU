@@ -12,12 +12,15 @@ final class RidingScene: SKScene {
     private var nextAnimal = Double.random(in: 12...24)
     var onProgress: ((Int, String?, [String]) -> Void)?
     private let horse: HorseNode
+    private let child = SKNode()
+    private let lungeLine = SKShapeNode()
+    private let player: Player
     private let horseSize: Double
     private let obstacles = SKNode()
     private var lastTime: TimeInterval?
     private var animationTime = 0.0
     init(player: Player, mode: Mode) {
-        self.mode = mode; horseSize = player.horse.size.scale; horse = HorseNode(player: player); soundEnabled = player.sfxEnabled
+        self.player = player; self.mode = mode; horseSize = player.horse.size.scale; horse = HorseNode(player: player); soundEnabled = player.sfxEnabled
         super.init(size: CGSize(width: ArenaRide.width, height: ArenaRide.height))
         horse.enableAngledRiding(player: player)
         scaleMode = .aspectFit
@@ -30,6 +33,15 @@ final class RidingScene: SKScene {
             addChild(background)
         }
         obstacles.zPosition = 1; addChild(obstacles); addChild(horse)
+        if mode == .roundYard, let image = GameArt.rider(player.rider, palette: player.palette) {
+            let sprite = SKSpriteNode(texture: SKTexture(image: image))
+            sprite.size = CGSize(width: 65 * image.size.width / image.size.height, height: 65)
+            sprite.anchorPoint = CGPoint(x: 0.5, y: 0)
+            child.addChild(sprite); addChild(child); addChild(lungeLine)
+            let center = projected(RidePoint(x: 500, y: 310))
+            child.position = CGPoint(x: center.x, y: center.y); child.zPosition = 700 - CGFloat(center.y)
+            lungeLine.strokeColor = .brown; lungeLine.lineWidth = 2.5; lungeLine.zPosition = 800
+        }
         rebuildEquipment()
         renderHorse()
     }
@@ -41,6 +53,8 @@ final class RidingScene: SKScene {
     }
     func setGait(_ gait: RideGait) { arena.gait = gait; yard.setGait(gait) }
     func togglePoles() { yard.togglePoles(); rebuildEquipment() }
+    func toggleRunning() { yard.toggleRunning(); renderHorse() }
+    func toggleLunging() { yard.toggleLunging(); horse.setLunging(yard.lunging); renderHorse() }
     func changeDirection() { yard.changeDirection() }
     override func update(_ currentTime: TimeInterval) {
         guard let previous = lastTime else { lastTime = currentTime; return }
@@ -76,7 +90,15 @@ final class RidingScene: SKScene {
             horse.setScale(CGFloat(horseSize * (0.9 + 0.25 * (1 - yard.position.y / 620))))
             horse.render(point: projected(yard.position), facing: yard.facing, gait: yard.gait,
                          moving: yard.speedMultiplier > 0.05, time: animationTime,
-                         jumpHeight: yard.polesEnabled && polePhase < 0.18 ? 4 : 0)
+                         jumpHeight: yard.isRunning && yard.polesEnabled && polePhase < 0.18 ? 4 : 0)
+            child.isHidden = !yard.lunging; lungeLine.isHidden = !yard.lunging
+            if yard.lunging {
+                let hand = CGPoint(x: child.position.x + 13, y: child.position.y + 30)
+                let attachment = horse.convert(horse.bridleAttachment, to: self)
+                let path = CGMutablePath(); path.move(to: hand)
+                path.addQuadCurve(to: attachment, control: CGPoint(x: (hand.x + attachment.x) / 2, y: (hand.y + attachment.y) / 2 - 15))
+                lungeLine.path = path
+            }
         }
     }
     private func projected(_ point: RidePoint) -> RidePoint {
@@ -132,10 +154,13 @@ final class RidingScene: SKScene {
         } else {
             for index in 0..<4 {
                 let angle = Double(index) * .pi / 2
-                let point = projected(RidePoint(x: 500 + cos(angle) * 280, y: 310 + sin(angle) * 215))
-                let pole = SKShapeNode(rectOf: CGSize(width: 65, height: 7), cornerRadius: 3)
-                pole.position = CGPoint(x: point.x, y: point.y); pole.zRotation = CGFloat(angle * 0.4)
-                pole.fillColor = .systemBlue; pole.strokeColor = .white; pole.lineWidth = 2
+                let ends = RoundYardRide.poleEndpoints(angle: angle)
+                let a = projected(ends.0), b = projected(ends.1)
+                let path = CGMutablePath(); path.move(to: CGPoint(x: a.x, y: a.y)); path.addLine(to: CGPoint(x: b.x, y: b.y))
+                let pole = SKShapeNode(path: path)
+                pole.strokeColor = .systemBlue; pole.lineWidth = 7
+                let outline = SKShapeNode(path: path); outline.strokeColor = .white; outline.lineWidth = 10
+                outline.alpha = yard.polesEnabled ? 1 : 0.65; obstacles.addChild(outline)
                 pole.alpha = yard.polesEnabled ? 1 : 0.65; obstacles.addChild(pole)
             }
         }
@@ -165,6 +190,8 @@ final class RidingSession: ObservableObject {
     @Published var courseIndex = 0
     @Published var progress = 0
     @Published var polesEnabled = false
+    @Published var isRunning = false
+    @Published var lunging = false
     @Published var notice = ""
     private var noticeExpiry = Date.distantPast
     init(player: Player, mode: RidingScene.Mode, onActivity: @escaping (String) -> Void) {
@@ -185,4 +212,6 @@ final class RidingSession: ObservableObject {
         courseIndex = index; gait = .walk; progress = 0; notice = ""; scene.chooseCourse(index)
     }
     func togglePoles() { polesEnabled.toggle(); scene.togglePoles() }
+    func toggleRunning() { scene.toggleRunning(); isRunning = scene.yard.isRunning }
+    func toggleLunging() { scene.toggleLunging(); lunging = scene.yard.lunging; isRunning = false; notice = "" }
 }

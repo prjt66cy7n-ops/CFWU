@@ -136,45 +136,66 @@ struct FarmhouseScreen: View {
     let player: Player
     let search: (Int) -> Void
     @State private var opened: Set<Int> = []
-    @State private var pulse = false
-    private let places = ["🛋️", "🧸", "🚪", "📚", "🛏️", "🗄️"]
     private let names = ["Sofa cushion", "Toy basket", "Kitchen cupboard", "Bookshelf book", "Upstairs bed", "Hallway drawer"]
+    // Bounds refer to real furniture in the farmhouse painting, not a menu grid.
+    private let spots: [CGRect] = [
+        CGRect(x: 0.24, y: 0.55, width: 0.105, height: 0.09),
+        CGRect(x: 0.47, y: 0.78, width: 0.085, height: 0.12),
+        CGRect(x: 0.72, y: 0.43, width: 0.07, height: 0.10),
+        CGRect(x: 0.415, y: 0.405, width: 0.045, height: 0.08),
+        CGRect(x: 0.84, y: 0.11, width: 0.10, height: 0.07),
+        CGRect(x: 0.32, y: 0.485, width: 0.10, height: 0.04)
+    ]
     var body: some View {
-        VStack(spacing: 12) {
-            Text("🏡 Farmhouse").font(.title.bold())
-            Text(player.wandFound ? "🪄 Your wand is waiting at the stables" : (player.canFindWand ? "✨ Follow the sparkles" : "🏵️ 🏵️ 🏵️ → 🪄"))
-                .font(.title2)
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 18), count: 3), spacing: 18) {
-                ForEach(0..<6, id: \.self) { index in
-                    Button {
-                        opened.insert(index)
-                        let wasFound = player.wandFound
-                        search(index)
-                        if !wasFound && player.canFindWand && index == player.wandSpot { GameAudio.effect("wand", enabled: player.sfxEnabled) }
-                    } label: {
-                        VStack {
-                            if player.wandFound && index == player.wandSpot {
-                                Text("🪄").font(.system(size: 66))
-                            } else if let image = GameArt.region(sheet: "FarmhouseSearchSheet", column: index < 4 ? index : index - 4,
-                                                                row: index < 4 ? 0 : 1, columns: 4, rows: 2) {
-                                Image(uiImage: image).resizable().scaledToFit().frame(height: 95)
-                            } else { Text(places[index]).font(.system(size: 66)) }
-                            Text(names[index]).font(.headline)
-                            Text(player.canFindWand && !player.wandFound && index == player.wandSpot ? "✨" : (opened.contains(index) ? "✓" : " ")).font(.title)
-                                .opacity(pulse ? 1 : 0.5)
-                        }.frame(maxWidth: .infinity, minHeight: 150)
-                            .background(.regularMaterial).clipShape(RoundedRectangle(cornerRadius: 24))
-                    }
-                    .accessibilityIdentifier("wand-search-\(index)")
+        VStack(spacing: 8) {
+            Text("🏡 Farmhouse").font(.headline)
+            Text(player.wandFound ? "🪄 Your wand is waiting at the stables" : (player.canFindWand ? "Explore the room · Look behind things" : "Explore the room · Three ribbons unlock your wand"))
+                .font(.subheadline)
+            GeometryReader { geometry in
+                if let image = GameArt.environment(sheet: "FarmEnvironmentSheet", column: 0, row: 1) {
+                    let scale = min(geometry.size.width / image.size.width, geometry.size.height / image.size.height)
+                    let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+                    ZStack {
+                        Image(uiImage: image).resizable().frame(width: size.width, height: size.height).allowsHitTesting(false)
+                        ForEach(0..<6, id: \.self) { index in
+                            let rect = spots[index]
+                            let width = size.width * rect.width, height = size.height * rect.height
+                            Button {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { opened.insert(index) }
+                                let found = player.wandFound
+                                search(index)
+                                if !found && player.canFindWand && index == player.wandSpot { GameAudio.effect("wand", enabled: player.sfxEnabled) }
+                            } label: {
+                                ZStack {
+                                    if opened.contains(index) {
+                                        Color.brown.opacity(0.65).frame(width: width, height: height)
+                                        if player.wandFound && index == player.wandSpot { Text("🪄").font(.system(size: max(22, height * 0.6))) }
+                                    }
+                                    if index == 1, let basket = GameArt.region(sheet: "FarmhouseSearchSheet", column: 1, row: 0, columns: 4, rows: 2) {
+                                        Image(uiImage: basket).resizable().scaledToFit().frame(width: width, height: height)
+                                            .offset(x: opened.contains(index) ? width * 0.55 : 0, y: opened.contains(index) ? -height * 0.1 : 0)
+                                            .rotationEffect(.degrees(opened.contains(index) ? -8 : 0))
+                                    } else if let crop = patch(image, rect: rect) {
+                                        Image(uiImage: crop).resizable().frame(width: width, height: height)
+                                            .offset(x: opened.contains(index) ? width * 0.55 : 0, y: opened.contains(index) ? -height * 0.18 : 0)
+                                            .rotationEffect(.degrees(opened.contains(index) ? -6 : 0))
+                                    }
+                                }.frame(width: max(44, width), height: max(44, height)).contentShape(Rectangle())
+                            }.buttonStyle(.plain).accessibilityLabel(names[index])
+                                .accessibilityIdentifier("wand-search-\(index)")
+                                .position(x: size.width * rect.midX, y: size.height * rect.midY)
+                        }
+                    }.frame(width: size.width, height: size.height)
+                        .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
                 }
-            }
-            Spacer(minLength: 0)
-        }.padding(12).background {
-            if let image = GameArt.environment(sheet: "FarmEnvironmentSheet", column: 0, row: 1) {
-                Image(uiImage: image).resizable().scaledToFill().clipped().opacity(0.65).allowsHitTesting(false)
-            }
-        }.clipped().onAppear { withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true)) { pulse = true } }
-            .onChange(of: player.dailyDate) { _ in opened = [] }
+            }.clipped()
+        }.onChange(of: player.dailyDate) { _ in opened = [] }
+    }
+    private func patch(_ image: UIImage, rect: CGRect) -> UIImage? {
+        guard let source = image.cgImage,
+              let crop = source.cropping(to: CGRect(x: CGFloat(source.width) * rect.minX, y: CGFloat(source.height) * rect.minY,
+                                                   width: CGFloat(source.width) * rect.width, height: CGFloat(source.height) * rect.height)) else { return nil }
+        return UIImage(cgImage: crop)
     }
 }
 struct WandLaunchScreen: View {

@@ -83,14 +83,14 @@ final class RidingModelTests: XCTestCase {
         XCTAssertTrue(ride.completedJumps.contains(0))
     }
     func testRoundYardEmitsGaitAndPoleActivities() {
-        var ride = RoundYardRide(); ride.togglePoles()
+        var ride = RoundYardRide(); ride.toggleRunning(); ride.togglePoles()
         var events: [String] = []
         for _ in 0..<180 { ride.step(seconds: 0.1); events += ride.completedActivities }
         XCTAssertEqual(events.filter { $0 == "walk" }.count, 1)
         XCTAssertEqual(events.filter { $0 == "groundPoles" }.count, 1)
     }
     func testChangingGaitRequiresWholeNewCircuit() {
-        var ride = RoundYardRide()
+        var ride = RoundYardRide(); ride.toggleRunning()
         for _ in 0..<100 { ride.step(seconds: 0.1) }
         ride.setGait(.trot)
         var events: [String] = []
@@ -98,7 +98,7 @@ final class RidingModelTests: XCTestCase {
         XCTAssertTrue(events.isEmpty)
     }
     func testDirectionChangeSlowsAndResumesSameGait() {
-        var ride = RoundYardRide(); ride.setGait(.canter); ride.changeDirection()
+        var ride = RoundYardRide(); ride.toggleRunning(); ride.setGait(.canter); ride.changeDirection()
         for _ in 0..<7 { ride.step(seconds: 0.1) }
         XCTAssertTrue(ride.isTurning); XCTAssertLessThan(ride.speedMultiplier, 0.2)
         for _ in 0..<9 { ride.step(seconds: 0.1) }
@@ -114,4 +114,37 @@ final class RidingModelTests: XCTestCase {
         yard.step(seconds: -.infinity)
         XCTAssertEqual(yard.angle, angle)
     }
+    func testRoundYardStartsStoppedAndPausesCircuitProgress() {
+        var ride = RoundYardRide(); let initial = ride.angle
+        for _ in 0..<100 { ride.step(seconds: 0.1) }
+        XCTAssertEqual(ride.angle, initial)
+        ride.toggleRunning()
+        for _ in 0..<100 { ride.step(seconds: 0.1) }
+        ride.toggleRunning(); let stopped = ride.angle
+        for _ in 0..<100 { ride.step(seconds: 0.1); XCTAssertTrue(ride.completedActivities.isEmpty) }
+        XCTAssertEqual(ride.angle, stopped)
+        ride.toggleRunning(); var events: [String] = []
+        for _ in 0..<80 { ride.step(seconds: 0.1); events += ride.completedActivities }
+        XCTAssertEqual(events.filter { $0 == "walk" }.count, 1)
+    }
+    func testLungingNeedsGoAndWholeCircuit() {
+        var ride = RoundYardRide(); ride.toggleLunging()
+        XCTAssertTrue(ride.lunging); XCTAssertFalse(ride.isRunning)
+        ride.step(seconds: 0.1); XCTAssertTrue(ride.completedActivities.isEmpty)
+        ride.toggleRunning(); var events: [String] = []
+        for _ in 0..<180 { ride.step(seconds: 0.1); events += ride.completedActivities }
+        XCTAssertEqual(events.filter { $0 == "lunging" }.count, 1)
+        XCTAssertTrue(FarmArea.roundYard.activityIDs.contains("lunging"))
+        ride.toggleLunging(); XCTAssertFalse(ride.isRunning)
+    }
+    func testGroundPolesArePerpendicularToEllipticalTrack() {
+        for index in 0..<16 {
+            let angle = Double(index) * .pi / 8
+            let ends = RoundYardRide.poleEndpoints(angle: angle)
+            let tangent = RidePoint(x: -280 * sin(angle), y: 215 * cos(angle))
+            XCTAssertEqual((ends.1 - ends.0).dot(tangent), 0, accuracy: 0.000001)
+            XCTAssertEqual((ends.1 - ends.0).length, 76, accuracy: 0.000001)
+        }
+    }
+
 }

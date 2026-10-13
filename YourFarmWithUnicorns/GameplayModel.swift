@@ -38,7 +38,7 @@ enum FarmArea: String, CaseIterable, Identifiable {
     var activityIDs: Set<String> {
         switch self {
         case .arena: return Set(RideCourse.all.map(\.id))
-        case .roundYard: return ["walk", "trot", "canter", "groundPoles"]
+        case .roundYard: return ["walk", "trot", "canter", "groundPoles", "lunging"]
         default: return Set(activities.map(\.rawValue))
         }
     }

@@ -146,6 +146,19 @@ struct ArenaRide {
     }
 }
 struct RoundYardRide {
+    private(set) var isRunning = false
+    private(set) var lunging = false
+    private var lungeDistance = 0.0
+    mutating func toggleRunning() { isRunning.toggle() }
+    mutating func toggleLunging() {
+        lunging.toggle(); isRunning = false; lungeDistance = 0; gaitDistance = 0; poleDistance = 0
+    }
+    static func poleEndpoints(angle: Double) -> (RidePoint, RidePoint) {
+        let center = RidePoint(x: 500 + cos(angle) * 280, y: 310 + sin(angle) * 215)
+        // Normal to the elliptical track, before projecting into the angled camera.
+        let across = RidePoint(x: 215 * cos(angle), y: 280 * sin(angle)).normalized * 38
+        return (center + across, center - across)
+    }
     var gait: RideGait = .walk
     private(set) var angle = -Double.pi / 2
     private(set) var direction = 1.0
@@ -156,6 +169,7 @@ struct RoundYardRide {
     private var gaitDistance = 0.0
     private var poleDistance = 0.0
     var speedMultiplier: Double {
+        guard isRunning else { return 0 }
         guard isTurning else { return 1 }
         return abs(1 - turnElapsed / 0.75)
     }
@@ -168,11 +182,11 @@ struct RoundYardRide {
     mutating func togglePoles() { polesEnabled.toggle(); poleDistance = 0 }
     mutating func changeDirection() {
         guard !isTurning else { return }
-        isTurning = true; turnElapsed = 0; gaitDistance = 0; poleDistance = 0
+        isTurning = true; turnElapsed = 0; gaitDistance = 0; poleDistance = 0; lungeDistance = 0
     }
     mutating func step(seconds: Double) {
         completedActivities = []
-        guard seconds.isFinite, seconds > 0 else { return }
+        guard isRunning, seconds.isFinite, seconds > 0 else { return }
         let dt = min(seconds, 0.1)
         if isTurning {
             let old = turnElapsed
@@ -185,6 +199,10 @@ struct RoundYardRide {
         let delta = gait.speed / 280 * dt
         angle += direction * delta
         angle.formTruncatingRemainder(dividingBy: .pi * 2)
+        if lunging {
+            lungeDistance += delta
+            if lungeDistance >= .pi * 2 { completedActivities.append("lunging"); lungeDistance -= .pi * 2 }
+        }
         gaitDistance += delta
         if gaitDistance >= .pi * 2 { completedActivities.append(gait.rawValue); gaitDistance -= .pi * 2 }
         if polesEnabled {

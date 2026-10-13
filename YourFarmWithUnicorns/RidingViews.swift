@@ -24,7 +24,7 @@ struct RidingScreen: View {
                     Text("\(session.progress) / 3 jumps").font(.headline)
                 }
             } else {
-                Text("Round Yard · Your horse rides automatically").font(.headline)
+                Text(session.lunging ? "Round Yard · Lunging" : "Round Yard").font(.headline)
             }
             SpriteView(scene: session.scene)
                 .clipShape(RoundedRectangle(cornerRadius: 24))
@@ -41,6 +41,12 @@ struct RidingScreen: View {
                         .accessibilityAddTraits(session.gait == gait ? .isSelected : [])
                 }
                 if mode == .roundYard {
+                    Button { session.toggleRunning() } label: {
+                        Label(session.isRunning ? "Stop" : "Go", systemImage: session.isRunning ? "pause.fill" : "play.fill").frame(minHeight: 58)
+                    }.tint(session.isRunning ? .purple : .brown).accessibilityIdentifier("round-go-stop")
+                    Button { session.toggleLunging() } label: {
+                        Label("Lunging", systemImage: "figure.equestrian.sports").frame(minHeight: 58)
+                    }.tint(session.lunging ? .purple : .brown).accessibilityIdentifier("round-lunging")
                     Button { session.scene.changeDirection() } label: {
                         VStack { Image(systemName: "arrow.triangle.2.circlepath").font(.title); Text("Change Direction") }
                             .frame(minHeight: 58)
@@ -51,7 +57,7 @@ struct RidingScreen: View {
                 }
                 Spacer(minLength: 0)
             }
-            Text(session.notice.isEmpty ? (mode == .arena ? "Drag the joystick · Ride across glowing jumps · Tap fallen poles to reset" : "Complete a full circuit at any gait or over poles") : session.notice)
+            Text(session.notice.isEmpty ? (mode == .arena ? "Drag the joystick · Ride across glowing jumps · Tap fallen poles to reset" : "Choose an activity · Press Go · Complete a circuit · Stop whenever you like") : session.notice)
                 .font(.subheadline).lineLimit(2).frame(minHeight: 32)
                 .accessibilityAddTraits(.updatesFrequently)
         }

@@ -32,6 +32,16 @@ final class AppSmokeTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Daisy · Pink"].waitForExistence(timeout: 5))
         for place in ["washBay", "paddock", "chickenCoop", "farmhouse", "arena", "roundYard"] {
             app.buttons["visit-\(place)"].tap()
+            if place == "roundYard" {
+                let control = app.buttons["round-go-stop"]
+                XCTAssertTrue(control.waitForExistence(timeout: 5))
+                XCTAssertEqual(control.label, "Go")
+                control.tap(); XCTAssertEqual(control.label, "Stop")
+                control.tap(); XCTAssertEqual(control.label, "Go")
+                app.buttons["round-lunging"].tap()
+                XCTAssertEqual(control.label, "Go")
+                XCTAssertTrue(app.staticTexts["Round Yard · Lunging"].exists)
+            }
             XCTAssertTrue(app.buttons["home"].waitForExistence(timeout: 5)); goHome(app, stage: place)
         }
         app.terminate(); app.launch()

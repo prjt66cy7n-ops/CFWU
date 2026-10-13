@@ -25,6 +25,12 @@ final class HorseNode: SKNode {
     private var paintedTail: SKSpriteNode?
     private var angledPlayer: Player?
     private var angledFacing: RideFacing?
+    private var lunging = false
+    func setLunging(_ enabled: Bool) { lunging = enabled; angledFacing = nil }
+    var bridleAttachment: CGPoint {
+        let direction = angledFacing?.vector ?? RidePoint(x: 1, y: 0)
+        return CGPoint(x: direction.x * 25, y: 51 + direction.y * 12)
+    }
     private let angledFigure = SKNode()
     private var angledLegs: [SKSpriteNode] = []
     init(player: Player, mounted: Bool = true, unicorn: Bool = false) {
@@ -261,7 +267,13 @@ final class HorseNode: SKNode {
                 }
                 pad.position.y = 39; saddle.position.y = 42; riderBody.position.y = 49; riderHead.position.y = 63
                 riderBody.zPosition = 2; riderHead.zPosition = 3
-                if player.rider == .girl {
+                for node in [pad, saddle, riderBody, riderHead] { node.isHidden = lunging || (node === pad && !player.tack.saddlePad) || (node === saddle && !player.tack.saddle) }
+                if lunging {
+                    let halter = SKShapeNode(ellipseOf: CGSize(width: 13, height: 8))
+                    halter.position = bridleAttachment; halter.strokeColor = player.palette.uiColor
+                    halter.lineWidth = 2; halter.fillColor = .clear; angledFigure.addChild(halter)
+                }
+                if player.rider == .girl && !lunging {
                     let hair = SKShapeNode(ellipseOf: CGSize(width: 5, height: 14))
                     hair.position = CGPoint(x: 8, y: 54); hair.fillColor = .brown; hair.strokeColor = .clear
                     hair.zPosition = 2; angledFigure.addChild(hair)

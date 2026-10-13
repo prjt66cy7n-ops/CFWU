@@ -16,6 +16,7 @@ final class TaskScene: SKScene {
     private var renderingActivity = FarmActivity.feed
     private var feedingPoint: CGPoint?
     private var feedingElapsed = 0.0
+    private var feedingCluckElapsed = 0.0
     private var area: FarmArea { FarmArea.allCases.first { $0.activities.contains(game.activity) }! }
     private var dragging: String?
     private var dragPosition: CGPoint?
@@ -291,24 +292,25 @@ final class TaskScene: SKScene {
             if active || (activity == .eggs && self.game.activity != .straw) {
             for index in 0..<4 {
                 let point = nestPoint(index)
-                let nest = SKShapeNode(rectOf: CGSize(width: 100, height: 95), cornerRadius: 12)
-                nest.fillColor = .brown.withAlphaComponent(0.55); nest.strokeColor = .brown
+                let nest = SKShapeNode(rectOf: CGSize(width: 112, height: 92), cornerRadius: 2)
+                nest.fillColor = UIColor(red: 0.25, green: 0.14, blue: 0.06, alpha: 1)
+                nest.strokeColor = UIColor(red: 0.63, green: 0.38, blue: 0.15, alpha: 1); nest.lineWidth = 9
                 nest.position = point; nest.name = "nest-\(index)"; world.addChild(nest)
+                let shelf = SKShapeNode(rectOf: CGSize(width: 132, height: 12))
+                shelf.position = CGPoint(x: point.x, y: point.y - 47); shelf.fillColor = .brown; shelf.strokeColor = .brown; world.addChild(shelf)
                 let eggs = entry.state(for: .eggs, tack: player.tack)
                 if !eggs.collection.contains(index) {
                     sprite(eggs.revealed.contains(index) && activity == .eggs ? "egg-\(index)" : "nest-\(index)",
                            sheet: "CoopPaddockSheet", column: 0, row: 0,
-                           at: CGPoint(x: point.x + 8, y: point.y + 4), width: 42)
+                           at: CGPoint(x: point.x + 8, y: point.y - 15), width: 26)
                 }
                 // Straw conceals most of each already-present egg until searched.
-                for clump in 0..<3 {
-                    let straw = SKShapeNode(ellipseOf: CGSize(width: 40, height: 25))
-                    straw.position = CGPoint(x: point.x - 20 + CGFloat(clump * 20), y: point.y - 1 + CGFloat(clump % 2 * 8))
-                    straw.fillColor = UIColor(red: 0.87, green: 0.66, blue: 0.28, alpha: 1)
-                    straw.strokeColor = .systemBrown; straw.lineWidth = 1
-                    straw.alpha = activity == .straw ? (game.revealed.contains(index) && !game.collection.contains(index) ? 0.1 : 1) : (eggs.revealed.contains(index) ? 0.2 : 1)
+                sprite("nest-\(index)", sheet: "CoopPaddockSheet", column: 2, row: 1,
+                       at: CGPoint(x: point.x, y: point.y - 18), width: 100)
+                if let straw = world.children.last {
+                    straw.alpha = activity == .straw ? (game.revealed.contains(index) && !game.collection.contains(index) ? 0.1 : 1) : (eggs.revealed.contains(index) ? 0.15 : 1)
                     straw.name = activity == .eggs && eggs.revealed.contains(index) ? nil : (active ? "nest-\(index)" : "select-\(activity.rawValue)")
-                    world.addChild(straw)
+                    if eggs.revealed.contains(index) { straw.position.x += 22 }
                 }
                 zone("nest-\(index)", at: point, width: 110, height: 100, glow: activity == .straw)
             }
@@ -316,20 +318,49 @@ final class TaskScene: SKScene {
             if activity == .eggs {
                 zone("destination", at: CGPoint(x: 165, y: 270), width: 180, height: 150)
                 sprite("destination", sheet: "CoopPaddockSheet", column: 1, row: 0, at: CGPoint(x: 165, y: 270), width: 160)
+                for slot in 0..<game.collection.count {
+                    sprite("basket-egg-\(slot)", sheet: "CoopPaddockSheet", column: 0, row: 0,
+                           at: CGPoint(x: 140 + (slot % 3) * 25, y: 267 + (slot / 3) * 18), width: 28)
+                    world.children.last?.name = active ? "destination" : "select-eggs"
+                }
+                let lip = CGMutablePath(); lip.move(to: CGPoint(x: 107, y: 247))
+                lip.addQuadCurve(to: CGPoint(x: 223, y: 247), control: CGPoint(x: 165, y: 224))
+                let weave = SKShapeNode(path: lip); weave.strokeColor = .brown; weave.lineWidth = 7; world.addChild(weave)
             } else { sprite("tool", sheet: "CoopPaddockSheet", column: 2, row: 1, at: source, width: 130) }
         case .grain:
             zone("destination", at: CGPoint(x: 605, y: 235), width: 500, height: 220)
             sprite("tool", sheet: "CoopPaddockSheet", column: 2, row: 0, at: source, width: 130)
         case .coopWater:
             zone("destination", at: CGPoint(x: 875, y: 230), width: 150, height: 150)
-            sprite("destination", sheet: "CoopPaddockSheet", column: game.completed ? 1 : 0, row: 1, at: CGPoint(x: 875, y: 230), width: 150)
-            sprite("tool", sheet: "CareTackSheet", column: 3, row: 0, at: source, width: 135)
+            sprite("destination", sheet: "CoopPaddockSheet", column: 0, row: 1, at: CGPoint(x: 875, y: 230), width: 150)
+            if game.progress > 0 {
+                let water = SKShapeNode(rectOf: CGSize(width: 58, height: 78 * game.progress), cornerRadius: 12)
+                water.position = CGPoint(x: 875, y: 195 + 39 * game.progress)
+                water.fillColor = .systemCyan.withAlphaComponent(0.65); water.strokeColor = .clear; world.addChild(water)
+            }
+            let mount = CGPoint(x: 940, y: 355)
+            symbol("🚰", name: "hose-tap", at: mount, size: 34)
+            let nozzle = active && dragging == "tool" ? (dragPosition ?? source) : source
+            let tubing = CGMutablePath(); tubing.move(to: mount)
+            tubing.addCurve(to: nozzle, control1: CGPoint(x: 965, y: 235), control2: CGPoint(x: nozzle.x + 55, y: nozzle.y - 40))
+            let hose = SKShapeNode(path: tubing); hose.strokeColor = UIColor(red: 0.08, green: 0.45, blue: 0.20, alpha: 1)
+            hose.lineWidth = 7; world.addChild(hose)
+            sprite("tool", sheet: "CareTackSheet", column: 3, row: 0, at: source, width: 95)
+            if active && dragging == "tool" && targets["destination"]?.contains(nozzle) == true && !game.completed {
+                for index in 0..<9 {
+                    let phase = (game.progress * 12 + Double(index) / 9).truncatingRemainder(dividingBy: 1)
+                    let drop = SKShapeNode(circleOfRadius: 3)
+                    drop.fillColor = .systemCyan; drop.strokeColor = .white
+                    drop.position = CGPoint(x: nozzle.x + (875 - nozzle.x) * phase, y: nozzle.y + 25 + (260 - nozzle.y - 25) * phase)
+                    world.addChild(drop)
+                }
+            }
         case .sweepStable, .sweepCoop:
             zone("destination", at: CGPoint(x: 555, y: 200), width: 650, height: 240)
-            for index in 0..<22 {
+            for index in 0..<(activity == .sweepCoop ? 5 : 22) {
                 let point = CGPoint(x: 260 + (index * 137) % 590, y: 85 + (index * 61) % 210)
                 sprite("dirt-\(index)", sheet: "CoopPaddockSheet", column: 2, row: 3,
-                       at: point, width: CGFloat(28 + (index * 13) % 37))
+                       at: point, width: CGFloat((activity == .sweepCoop ? 20 : 28) + (index * 13) % (activity == .sweepCoop ? 16 : 37)))
                 if let patch = world.children.last { patch.alpha = CGFloat(1 - game.progress); patch.zPosition = -0.2 }
             }
             sprite("tool", sheet: "CareTackSheet", column: 2, row: 1, at: source, width: 120)
@@ -367,7 +398,7 @@ final class TaskScene: SKScene {
         let points = [CGPoint(x: 350, y: 185), CGPoint(x: 540, y: 145), CGPoint(x: 750, y: 215), CGPoint(x: 410, y: 285), CGPoint(x: 740, y: 330)]
         return points[index]
     }
-    private func nestPoint(_ index: Int) -> CGPoint { CGPoint(x: 365 + index * 150, y: 425) }
+    private func nestPoint(_ index: Int) -> CGPoint { CGPoint(x: 345 + index * 140, y: 365) }
     private func notify() {
         let justCompleted = game.completed && !reportedCompletion
         if justCompleted {
@@ -394,7 +425,7 @@ final class TaskScene: SKScene {
     }
     func feedChickens(at point: CGPoint, restart: Bool = false) {
         guard restart || feedingPoint == nil else { return }
-        feedingPoint = point; feedingElapsed = 0
+        feedingPoint = point; feedingElapsed = 0; feedingCluckElapsed = 0
         GameAudio.effect("chicken", enabled: player.sfxEnabled)
         for index in 0..<3 {
             guard let chicken = animals.childNode(withName: "chicken-\(index)") else { continue }
@@ -523,7 +554,10 @@ final class TaskScene: SKScene {
         guard let previous = previousTime else { return }
         let dt = min(0.1, max(0, currentTime - previous))
         if feedingPoint != nil {
-            feedingElapsed += dt
+            feedingElapsed += dt; feedingCluckElapsed += dt
+            if feedingCluckElapsed >= 1.25 {
+                feedingCluckElapsed = 0; GameAudio.effect("chicken", enabled: player.sfxEnabled)
+            }
             if feedingElapsed >= 8 { feedingPoint = nil; render() }
         }
         animalElapsed += dt
@@ -538,6 +572,6 @@ final class TaskScene: SKScene {
         }
         guard game.activity == .coopWater, dragging == "tool", !game.completed,
               let point = dragPosition, targets["destination"]?.contains(point) == true else { return }
-        game.holdWater(seconds: dt); render(); notify()
+        game.holdWater(seconds: dt); GameAudio.effect("water", enabled: player.sfxEnabled); render(); notify()
     }
 }

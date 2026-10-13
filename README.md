@@ -10,7 +10,7 @@ The game has illustrated environments, all thirteen painted care horses, articul
 2. In Finder open **YourFarmWithUnicorns.xcodeproj** inside that folder. Open this file specifically; opening the whole folder or `Package.swift` opens the core test library instead of the app.
 3. Select the shared **YourFarmWithUnicorns** scheme and a **named iPad simulator**, then press **⌘R**. Simulator builds do not need a signing team.
 4. Keep the existing app installed in the simulator if you want to retain its child saves. The bundle identifier and save format are unchanged.
-5. Press **⌘U** for the 34 model tests, two UI tests and two native artwork/scene tests. UI tests use isolated UUID-named temporary saves in Debug builds, so first-launch and flight checks do not touch existing child profiles.
+5. Press **⌘U** for the 37 model tests, two UI tests and two native artwork/scene tests. UI tests use isolated UUID-named temporary saves in Debug builds, so first-launch and flight checks do not touch existing child profiles.
 
 Requires Xcode 15+ and an installed iOS simulator runtime. Real iPad installation needs your own signing team and unique bundle identifier.
 
@@ -36,8 +36,8 @@ Large activity buttons choose a task. A brief moving-hand demonstration and glow
 ## Ribbons, wand and flight
 
 - Each participating area gives at most one red rosette per local calendar day after **three distinct activities**, in any order. Repeated foods count as one feeding activity; mealworms/vegetables count as one treat activity. Invalid activity IDs cannot award progress.
-- Arena's three preset courses count as its three distinct activities; round yard has walk, trot, canter and poles. The farmhouse itself does not award a ribbon.
-- After three ribbons, tap the sparkling hiding spot in the farmhouse. One discovery unlocks the reusable wand at stables for the rest of that day.
+- Arena's three preset courses count as its three distinct activities; round yard has walk, trot, canter, poles and lunging. The farmhouse itself does not award a ribbon.
+- After three ribbons, search behind furniture in the room in the farmhouse. One discovery unlocks the reusable wand at stables for the rest of that day.
 - At stables tap the wand tray, then drag the wand onto the horse. Every horse can become a winged unicorn with a white base coat, retained identifying markings and size, and palette-matched mane/tail. It is ridden bareback with tack hidden.
 - Flight lasts about **38 seconds**, including transformation and finale, above the same illustrated farm layout as the map. Tap stars for rainbow trail, and hearts/butterflies/rings for optional effects. There is no steering, score or failure condition.
 - The finale says **“What a wonderful day!”** and returns to the map. Home exits immediately at any point. Flight appearance is temporary rendering state; it never overwrites the saved horse or tack, so normal appearance returns instantly.
@@ -90,3 +90,11 @@ Eight illustrated environment cells now cover every area and the shared navigati
 ## Scene interaction update
 
 Activity objects and tools now exist at fixed locations before selection. Touching a resting tool can select its task; switching tasks retains other activity objects and their progress. The coop keeps the same chicken nodes while they gather and peck at scattered food; updates no longer interrupt their feeding animation. Eggs are already present beneath straw in back-wall nesting boxes and must be uncovered before collection. Floor mess uses varied scattered patches rather than four identical piles in a row. Liquorice is a small dark stick, with separate carrot/apple/liquorice/hay crunch effects and an occasional delayed post-eating fart. Hooves are lifted then scrubbed with the pick; lower leg artwork hinges upward. Tack rests on a side rack and is dragged onto the horse. Riding uses eight angled poses for each of thirteen horses, projected ground positions and upright jumps. Full-sheet silhouette rectangles in Resources/atlas-regions.json and runtime filtering prevent adjacent-image fragments, and the outdoor scene-divider crop is corrected. The scene-interaction build passed all 38 native tests and optimized Release compilation in the run linked above. The native checks also caught and verified fixes for Home controls being obstructed by oversized scene hit regions.
+
+## Round yard and discovery interaction update
+
+The round yard starts stopped, with Go/Stop and Lunging controls. Lunging removes the mounted rider, places the chosen child in the centre and connects a visible rope to the horse’s halter; a full circuit counts as a distinct activity. Ground poles lie perpendicular to the elliptical track and use the same angled camera projection as the horse.
+
+Farmhouse search targets follow furniture in the painting rather than covering it with cards. Touching them shifts the object aside to reveal what is behind it. The coop has solid wooden nesting boxes with eggs concealed by textured straw, collected eggs stack inside the basket, and only five small floor mess patches. A fixed tap connects to the movable hose; droplets flow while held at the dispenser and its blue water level rises. Feeding chickens gather, peck and cluck repeatedly. Audio session configuration and player loading run on a serial background queue; Combine is explicitly imported for the daily timer.
+
+Local validation for this update: 37 model tests passed; all Apple app sources parsed. Native simulator validation is recorded separately above once it completes.
