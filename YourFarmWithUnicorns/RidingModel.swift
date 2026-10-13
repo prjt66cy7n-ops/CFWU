@@ -174,7 +174,7 @@ struct RoundYardRide {
         return abs(1 - turnElapsed / 0.75)
     }
     var position: RidePoint { RidePoint(x: 500 + cos(angle) * 280, y: 310 + sin(angle) * 215) }
-    var facing: RideFacing { .from(RidePoint(x: -sin(angle) * direction, y: cos(angle) * direction)) }
+    var facing: RideFacing { .from(RidePoint(x: -280 * sin(angle) * direction, y: 215 * cos(angle) * direction)) }
     mutating func setGait(_ new: RideGait) {
         if new != gait { gaitDistance = 0 }
         gait = new
