@@ -129,13 +129,14 @@ final class RidingScene: SKScene {
                 }
                 obstacles.addChild(item)
             }
-        } else if yard.polesEnabled {
+        } else {
             for index in 0..<4 {
                 let angle = Double(index) * .pi / 2
                 let point = projected(RidePoint(x: 500 + cos(angle) * 280, y: 310 + sin(angle) * 215))
                 let pole = SKShapeNode(rectOf: CGSize(width: 65, height: 7), cornerRadius: 3)
                 pole.position = CGPoint(x: point.x, y: point.y); pole.zRotation = CGFloat(angle * 0.4)
-                pole.fillColor = .systemBlue; pole.strokeColor = .white; pole.lineWidth = 2; obstacles.addChild(pole)
+                pole.fillColor = .systemBlue; pole.strokeColor = .white; pole.lineWidth = 2
+                pole.alpha = yard.polesEnabled ? 1 : 0.65; obstacles.addChild(pole)
             }
         }
     }

@@ -171,7 +171,7 @@ struct FarmhouseScreen: View {
             Spacer(minLength: 0)
         }.padding(12).background {
             if let image = GameArt.environment(sheet: "FarmEnvironmentSheet", column: 0, row: 1) {
-                Image(uiImage: image).resizable().scaledToFill().clipped().opacity(0.65)
+                Image(uiImage: image).resizable().scaledToFill().clipped().opacity(0.65).allowsHitTesting(false)
             }
         }.clipped().onAppear { withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true)) { pulse = true } }
             .onChange(of: player.dailyDate) { _ in opened = [] }
