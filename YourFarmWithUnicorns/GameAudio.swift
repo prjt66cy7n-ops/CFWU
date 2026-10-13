@@ -57,7 +57,7 @@ enum GameAudio {
             if effectPlayers[name] == nil {
                 let resource = name == "task" ? "course-chime" : "sfx-\(name)"
                 guard let url = Bundle.main.url(forResource: resource, withExtension: "wav") else { return }
-                let player = try AVAudioPlayer(contentsOf: url); player.volume = 0.3; effectPlayers[name] = player
+                let player = try AVAudioPlayer(contentsOf: url); player.volume = name.hasPrefix("crunch-") ? 0.75 : 0.3; effectPlayers[name] = player
             }
             if name == "water", effectPlayers[name]?.isPlaying == true { return }
             effectPlayers[name]?.currentTime = 0; effectPlayers[name]?.play()
