@@ -21,12 +21,14 @@ final class TaskScene: SKScene {
     private var nextAnimal = Double.random(in: 10...22)
     private let source = CGPoint(x: 150, y: 95)
     private let bodyPoint = CGPoint(x: 575, y: 325)
+    private var tapPoint: CGPoint { CGPoint(x: 180, y: game.activity == .paddockWater ? 355 : 430) }
+    private var bucketFillPoint: CGPoint { CGPoint(x: 180, y: tapPoint.y - 95) }
     var foodVariant = 0 { didSet { render() } }
     var guide: String {
         if game.completed { return "✨ ✓ · Tap the activity to play again" }
         switch game.activity {
         case .manure: return "Tap a pile · Drag it to the wheelbarrow"
-        case .trough: return game.stage == 0 ? "Brush back and forth over the green trough" : "Tap the hose to refill"
+        case .trough: return game.stage == 0 ? "Brush back and forth over the green water" : "Drag the hose to the clean trough to refill"
         case .stableWater, .paddockWater:
             return game.bucketFull ? "Drag the full bucket to your horse" : (game.bucketAtTap ? "Tap the tap to fill your bucket" : "Drag the bucket under the tap")
         case .brush: return "Brush back and forth over your horse"
@@ -35,7 +37,7 @@ final class TaskScene: SKScene {
         case .tack: return "Drag pad, saddle and bridle onto the horse · Tap equipped tack to remove"
         case .eggs: return "Tap a nest · Drag each egg to the basket"
         case .straw: return "Tap each nest to clear straw · Drag fresh straw into it"
-        case .fence: return game.brokenFence ? "Tap the hammer five times to fix the rail" : "✓ The fence is sound · Try another activity"
+        case .fence: return game.brokenFence ? (game.hammerAtFence ? "Tap the hammer at the fence to fix the rail" : "Drag the hammer to the damaged fence rail") : "✓ The fence is sound · Try another activity"
         case .coopWater: return "Drag the hose to the water container · Hold it there"
         case .sweepStable, .sweepCoop: return "Sweep back and forth across the dirty patches"
         case .grain: return "Drag the scoop across the ground"
@@ -115,11 +117,16 @@ final class TaskScene: SKScene {
             zone("destination", at: CGPoint(x: 470, y: 325), width: 140, height: 130)
             food(at: source)
         case .stableWater, .paddockWater:
-            symbol("🚰", name: "tap", at: CGPoint(x: 180, y: 430))
-            zone("tap", at: CGPoint(x: 180, y: 365), width: 160, height: 170, glow: !game.bucketFull)
+            if activity == .paddockWater {
+                let mount = SKShapeNode(rectOf: CGSize(width: 20, height: 44), cornerRadius: 3)
+                mount.position = tapPoint; mount.fillColor = UIColor(red: 0.57, green: 0.35, blue: 0.15, alpha: 1)
+                mount.strokeColor = .brown; world.addChild(mount)
+            }
+            symbol("🚰", name: "tap", at: tapPoint)
+            zone("tap", at: CGPoint(x: 180, y: tapPoint.y - 65), width: 160, height: 170, glow: !game.bucketFull)
             zone("destination", at: CGPoint(x: 505, y: 260), width: 180, height: 140, glow: game.bucketFull)
             sprite("tool", sheet: "CareTackSheet", column: game.bucketFull ? 1 : 0, row: 1,
-                   at: game.completed ? CGPoint(x: 505, y: 260) : (game.bucketAtTap && dragPosition == nil ? CGPoint(x: 180, y: 335) : source), width: 120)
+                   at: game.completed ? CGPoint(x: 505, y: 260) : (game.bucketAtTap && dragPosition == nil ? bucketFillPoint : source), width: 120)
         case .brush, .wash:
             zone("destination", at: bodyPoint, width: 245, height: 180)
             for index in 0..<6 {
@@ -150,29 +157,48 @@ final class TaskScene: SKScene {
         case .manure:
             zone("destination", at: CGPoint(x: 175, y: 320), width: 230, height: 170)
             sprite("destination", sheet: "CareTackSheet", column: 3, row: 1, at: CGPoint(x: 175, y: 320), width: 200)
+            // Deposited piles stay in the bowl, above the wheelbarrow artwork.
+            for (slot, _) in game.collection.sorted().enumerated() {
+                sprite("load-\(slot)", sheet: "CoopPaddockSheet", column: 1, row: 2,
+                       at: CGPoint(x: 151 + (slot % 3) * 22, y: 346 + (slot / 3) * 13), width: 48)
+                world.childNode(withName: "load-\(slot)")?.zPosition = 1
+            }
             for index in 0..<5 where !game.collection.contains(index) {
                 let point = pilePoint(index)
                 sprite("pile-\(index)", sheet: "CoopPaddockSheet", column: 1, row: 2, at: point, width: 85)
                 if game.revealed.contains(index) { zone("pile-\(index)", at: point, width: 90, height: 90) }
             }
         case .trough:
-            let point = CGPoint(x: 565, y: 330)
-            sprite("destination", sheet: "CoopPaddockSheet", column: game.completed ? 1 : 0, row: 3, at: point, width: 320)
-            zone("destination", at: point, width: 330, height: 185)
-            if game.stage == 0 {
-                sprite("algae", sheet: "CoopPaddockSheet", column: 3, row: 3, at: point, width: 200)
-                world.childNode(withName: "algae")?.alpha = CGFloat(1 - game.progress)
+            let point = CGPoint(x: 245, y: 290)
+            sprite("destination", sheet: "CoopPaddockSheet", column: 1, row: 3, at: point, width: 220)
+            zone("destination", at: point, width: 225, height: 140, glow: !game.completed)
+            if !game.completed {
+                let water = SKShapeNode(ellipseOf: CGSize(width: 150, height: 48))
+                water.position = CGPoint(x: point.x, y: point.y + 24)
+                water.strokeColor = .clear
+                water.fillColor = game.stage == 0 ? UIColor(red: 0.34, green: 0.48, blue: 0.12, alpha: 1) : .gray
+                water.alpha = game.stage == 0 ? CGFloat(1 - game.progress) : 1
+                world.addChild(water)
             }
             sprite("tool", sheet: "CareTackSheet", column: game.stage == 0 ? 0 : 3, row: 0, at: source, width: 130)
         case .hay:
             zone("destination", at: CGPoint(x: 455, y: 310), width: 190, height: 170)
             sprite("tool", sheet: "CareTackSheet", column: 2, row: 2, at: source, width: 125)
         case .fence:
-            sprite("fence", sheet: "SceneryPropsSheet", column: 0, row: 2, at: CGPoint(x: 580, y: 345), width: 480)
-            sprite("rail", sheet: "CoopPaddockSheet", column: 2, row: 2, at: CGPoint(x: 565, y: 330), width: 200)
-            world.childNode(withName: "rail")?.alpha = game.completed || !game.brokenFence ? 1 : 0.35
-            zone("destination", at: CGPoint(x: 580, y: 345), width: 470, height: 200)
-            sprite("tool", sheet: "CoopPaddockSheet", column: 3, row: 2, at: source, width: 130)
+            let point = CGPoint(x: 600, y: 351)
+            if game.brokenFence {
+                // Attach the loose rail to the background's back fence line.
+                // It straightens progressively instead of moving fence furniture
+                // into the middle of the paddock.
+                let rail = SKShapeNode(rectOf: CGSize(width: 76, height: 12), cornerRadius: 2)
+                rail.position = point; rail.fillColor = UIColor(red: 0.66, green: 0.4, blue: 0.16, alpha: 1)
+                rail.strokeColor = UIColor(red: 0.4, green: 0.24, blue: 0.1, alpha: 1)
+                rail.lineWidth = 2; rail.zRotation = game.completed ? 0 : -0.32 * CGFloat(1 - game.progress)
+                world.addChild(rail)
+                if !game.completed { zone("destination", at: point, width: 110, height: 90) }
+                sprite("tool", sheet: "CoopPaddockSheet", column: 3, row: 2,
+                       at: game.hammerAtFence ? CGPoint(x: 610, y: 400) : source, width: 110)
+            }
         case .eggs, .straw:
             for index in 0..<4 {
                 let point = nestPoint(index)
@@ -291,9 +317,15 @@ final class TaskScene: SKScene {
             GameAudio.effect("pick", enabled: player.sfxEnabled); render(); notify(); return
         }
         if name == "tap" { game.tapTarget(); GameAudio.effect("water", enabled: player.sfxEnabled); render(); notify(); return }
-        if name == "tool" && (game.activity == .fence || (game.activity == .trough && game.stage == 1)) {
+        if name == "tool" && game.activity == .fence && game.hammerAtFence {
             game.tapTarget(); GameAudio.effect(game.activity == .fence ? "pick" : "water", enabled: player.sfxEnabled)
-            render(); notify(); return
+            render(); notify()
+            if game.activity == .fence {
+                world.childNode(withName: "tool")?.run(.sequence([
+                    .rotate(byAngle: -0.5, duration: 0.1), .rotate(byAngle: 0.5, duration: 0.15)
+                ]))
+            }
+            return
         }
         if name.hasPrefix("pile-"), let index = Int(name.dropFirst(5)) { game.tapTarget(index); render() }
         if name == "tool" || name.hasPrefix("pile-") || name.hasPrefix("egg-") || name.hasPrefix("tack-") {
@@ -336,11 +368,10 @@ final class TaskScene: SKScene {
     private func demonstrate() {
         let hand = SKLabelNode(text: "👆"); hand.fontSize = 40; hand.zPosition = 3000; hand.position = source
         let destination: CGPoint
-        if game.activity == .trough && game.stage == 1 { destination = source }
-        else if game.activity == .manure { hand.position = pilePoint(0); destination = CGPoint(x: 175, y: 320) }
+        if game.activity == .manure { hand.position = pilePoint(0); destination = CGPoint(x: 175, y: 320) }
         else if [.eggs, .straw].contains(game.activity) { hand.position = nestPoint(0); destination = game.activity == .eggs ? CGPoint(x: 165, y: 270) : source }
         else if game.activity == .hooves { destination = hoofPoint(0) }
-        else if [.stableWater, .paddockWater].contains(game.activity) { destination = CGPoint(x: 180, y: 335) }
+        else if [.stableWater, .paddockWater].contains(game.activity) { destination = bucketFillPoint }
         else { destination = targets["destination"].map { CGPoint(x: $0.midX, y: $0.midY) } ?? bodyPoint }
         world.addChild(hand)
         var actions: [SKAction] = [.move(to: destination, duration: 0.8)]

@@ -105,7 +105,7 @@ final class GameplayTests: XCTestCase {
         trough.scrub(distance: 10000); XCTAssertFalse(trough.completed)
         for _ in 0..<7 { trough.scrub(distance: 80) }
         XCTAssertEqual(trough.stage, 1); XCTAssertFalse(trough.completed)
-        trough.tapTarget(); XCTAssertTrue(trough.completed)
+        trough.dropAtDestination(); XCTAssertTrue(trough.completed)
         for activity in [FarmActivity.brush, .sweepStable, .sweepCoop, .grain] {
             var game = ChoreGame(activity: activity)
             for _ in 0..<8 { game.scrub(distance: 80) }
@@ -147,6 +147,10 @@ final class GameplayTests: XCTestCase {
         for _ in 0..<9 { fence.tapTarget() }
         XCTAssertFalse(fence.completed)
         fence = ChoreGame(activity: .fence)
+        for _ in 0..<5 { fence.tapTarget() }
+        XCTAssertEqual(fence.stage, 0, "Picking up the hammer must not repair the fence")
+        fence.dropAtDestination()
+        XCTAssertTrue(fence.hammerAtFence)
         for _ in 0..<5 { fence.tapTarget() }
         XCTAssertTrue(fence.completed)
     }

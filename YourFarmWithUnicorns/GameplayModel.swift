@@ -120,6 +120,7 @@ struct ChoreGame {
     var liftedHoof: Int?
     var hoofPicks = [0, 0, 0, 0]
     var bucketAtTap = false
+    var hammerAtFence = false
     var bucketFull = false
     var tack: Tack
     init(activity: FarmActivity, tack: Tack = Tack(), brokenFence: Bool = true) {
@@ -159,7 +160,7 @@ struct ChoreGame {
         case .stableWater, .paddockWater: if bucketAtTap { bucketFull = true }
         case .trough: if stage == 1 { progress = 1; completed = true }
         case .fence:
-            if brokenFence { stage += 1; progress = Double(stage) / 5; completed = stage >= 5 }
+            if brokenFence && hammerAtFence { stage += 1; progress = Double(stage) / 5; completed = stage >= 5 }
         default: break
         }
     }
@@ -178,6 +179,8 @@ struct ChoreGame {
     mutating func dropAtDestination(item: Int = 0) {
         guard !completed else { return }
         switch activity {
+        case .trough: if stage == 1 { tapTarget() }
+        case .fence: if brokenFence { hammerAtFence = true }
         case .feed, .hay, .treats: progress = 1; completed = true
         case .stableWater, .paddockWater: if bucketFull { progress = 1; completed = true }
         case .manure:
