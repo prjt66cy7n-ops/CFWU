@@ -161,7 +161,7 @@ struct FarmhouseScreen: View {
                             let rect = spots[index]
                             let width = size.width * rect.width, height = size.height * rect.height
                             Button {
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { opened.insert(index) }
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { _ = opened.insert(index) }
                                 let found = player.wandFound
                                 search(index)
                                 if !found && player.canFindWand && index == player.wandSpot { GameAudio.effect("wand", enabled: player.sfxEnabled) }

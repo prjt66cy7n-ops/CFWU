@@ -1,4 +1,4 @@
-"""Generate original draft instrumental music and feedback sounds; no external samples."""
+"""Generate original draft music/effects and prepare credited eating/water sources."""
 from pathlib import Path
 import math, random, struct, wave
 ROOT = Path(__file__).resolve().parents[1] / 'YourFarmWithUnicorns' / 'Resources'
@@ -50,11 +50,11 @@ for name, pitches in [('wand', [72, 76, 79, 84]), ('magic', [79, 84]), ('ribbon'
 write('sfx-pick', 0.15, lambda t: 0.2 * math.exp(-t * 55) * math.sin(2 * math.pi * 900 * t))
 write('sfx-chicken', 0.4, lambda t: 0.13 * math.sin(2 * math.pi * (1000 * t - 500 * t * t)) * math.exp(-t * 8) * (0.5 + 0.5 * math.sin(t * 80)))
 rng = random.Random(66)
-write('sfx-water', 0.55, lambda t: 0.04 * (rng.random() * 2 - 1) + 0.04 * math.sin(t * 2200) * math.exp(-t * 4))
+# Water comes from the licensed source loop, prepared below.
 for i in range(1, 4):
     write('sfx-horse-' + str(i), 0.65, lambda t, i=i: 0.11 * math.sin(2 * math.pi * ((280 + i * 50) * t + 90 * t * t)) * math.sin(t * 25) ** 2 * math.exp(-t * 3))
 write('sfx-horse-fart', 0.3, lambda t: 0.14 * math.sin(t * 2 * math.pi * 65) * (0.5 + 0.5 * math.sin(t * 170)) * math.exp(-t * 10))
-print('Generated 9 original instrumental music tracks and 10 synthetic feedback/animal clips.')
+print('Generated original instrumental music and draft feedback/animal clips.')
 
 # Keep the dedicated eating generator shared with selective asset regeneration.
 import runpy

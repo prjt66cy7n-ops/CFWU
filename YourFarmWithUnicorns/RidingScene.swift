@@ -90,7 +90,7 @@ final class RidingScene: SKScene {
             horse.setScale(CGFloat(horseSize * (0.9 + 0.25 * (1 - yard.position.y / 620))))
             horse.render(point: projected(yard.position), facing: yard.facing, gait: yard.gait,
                          moving: yard.speedMultiplier > 0.05, time: animationTime,
-                         jumpHeight: yard.isRunning && yard.polesEnabled && polePhase < 0.18 ? 4 : 0)
+                         jumpHeight: yard.isRunning && yard.polesEnabled ? max(0, 1 - polePhase / 0.24) * 8 : 0)
             child.isHidden = !yard.lunging; lungeLine.isHidden = !yard.lunging
             if yard.lunging {
                 let hand = CGPoint(x: child.position.x + 13, y: child.position.y + 30)
@@ -155,13 +155,14 @@ final class RidingScene: SKScene {
             for index in 0..<4 {
                 let angle = Double(index) * .pi / 2
                 let ends = RoundYardRide.poleEndpoints(angle: angle)
-                let a = projected(ends.0), b = projected(ends.1)
+                let a = yard.polesEnabled ? projected(ends.0) : projected(RidePoint(x: 825, y: 470 + Double(index) * 14))
+                let b = yard.polesEnabled ? projected(ends.1) : projected(RidePoint(x: 925, y: 470 + Double(index) * 14))
                 let path = CGMutablePath(); path.move(to: CGPoint(x: a.x, y: a.y)); path.addLine(to: CGPoint(x: b.x, y: b.y))
                 let pole = SKShapeNode(path: path)
                 pole.strokeColor = .systemBlue; pole.lineWidth = 7
                 let outline = SKShapeNode(path: path); outline.strokeColor = .white; outline.lineWidth = 10
-                outline.alpha = yard.polesEnabled ? 1 : 0.65; obstacles.addChild(outline)
-                pole.alpha = yard.polesEnabled ? 1 : 0.65; obstacles.addChild(pole)
+                outline.alpha = 1; obstacles.addChild(outline)
+                pole.alpha = 1; obstacles.addChild(pole)
             }
         }
     }

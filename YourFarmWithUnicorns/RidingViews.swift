@@ -52,12 +52,13 @@ struct RidingScreen: View {
                             .frame(minHeight: 58)
                     }
                     Button { session.togglePoles() } label: {
-                        VStack { Text("▰ ▰ ▰").font(.title); Text("Ground Poles") }.frame(minHeight: 58)
+                        VStack { Text("▰ ▰ ▰").font(.title); Text(session.polesEnabled ? "Pole Practice: On" : "Pole Practice: Off") }.frame(minHeight: 58)
                     }.tint(session.polesEnabled ? .purple : .brown)
+                        .accessibilityHint("Places four poles across the circular track. Press Go to step over them; turn off to put them away.")
                 }
                 Spacer(minLength: 0)
             }
-            Text(session.notice.isEmpty ? (mode == .arena ? "Drag the joystick · Ride across glowing jumps · Tap fallen poles to reset" : "Choose an activity · Press Go · Complete a circuit · Stop whenever you like") : session.notice)
+            Text(session.notice.isEmpty ? (mode == .arena ? "Drag the joystick · Ride across glowing jumps · Tap fallen poles to reset" : (session.polesEnabled ? "Press Go · Your horse steps over four poles · Complete a circuit for pole practice" : "Choose an activity · Press Go · Stop whenever you like")) : session.notice)
                 .font(.subheadline).lineLimit(2).frame(minHeight: 32)
                 .accessibilityAddTraits(.updatesFrequently)
         }

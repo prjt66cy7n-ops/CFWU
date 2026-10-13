@@ -56,6 +56,12 @@ struct FarmRootView: View {
                     Toggle("Sound Effects", isOn: Binding(get: { game.active?.sfxEnabled ?? true }, set: { value in
                         game.update { $0.sfxEnabled = value }; if !value { GameAudio.stopEffects() }
                     }))
+                    Section("Sound credits") {
+                        Text("Chewing carrot — InspectorJ · Freesound 412068. Edited and mixed for this game.").font(.footnote)
+                        Link("Creative Commons Attribution 3.0", destination: URL(string: "https://creativecommons.org/licenses/by/3.0/")!)
+                        Link("Original recording", destination: URL(string: "https://freesound.org/people/InspectorJ/sounds/412068/")!)
+                        Text("Eating crunches — StarNinjas · CC0. Water Flowing — rubberduck · CC0.").font(.footnote)
+                    }
                 }.navigationTitle("Sound").toolbar { Button("Done") { settings = false } }
             }
         }
@@ -122,13 +128,22 @@ struct FarmRootView: View {
                         map.updateName(player.name)
                         map.onVisit = { place in game.refreshDay(); area = place }
                     }.accessibilityLabel("Farm map")
-                HStack(spacing: 6) {
-                    ForEach(FarmArea.allCases) { place in
-                        Button { game.refreshDay(); area = place } label: {
-                            Text(place.icon).font(.title2).frame(maxWidth: .infinity, minHeight: 38)
-                        }.accessibilityLabel(place.title).accessibilityIdentifier("visit-\(place.rawValue)")
+                    .overlay {
+                        GeometryReader { geometry in
+                            let scale = min(geometry.size.width / 1000, geometry.size.height / 620)
+                            let insetX = (geometry.size.width - 1000 * scale) / 2
+                            let insetY = (geometry.size.height - 620 * scale) / 2
+                            ForEach(FarmLandscape.paintedLocations, id: \.0) { place, point in
+                                Button { game.refreshDay(); area = place } label: {
+                                    Circle().fill(Color.white.opacity(0.001))
+                                        .frame(width: max(44, 64 * scale), height: max(44, 64 * scale))
+                                        .contentShape(Circle())
+                                }.buttonStyle(.plain)
+                                    .accessibilityLabel(place.title).accessibilityIdentifier("visit-\(place.rawValue)")
+                                    .position(x: insetX + point.x * scale, y: insetY + (620 - point.y) * scale)
+                            }
+                        }
                     }
-                }
                 Text("\(player.horse.name) · \(player.palette.label)").font(.caption)
             }
         }

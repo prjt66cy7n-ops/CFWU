@@ -23,8 +23,8 @@ xcodebuild test -project YourFarmWithUnicorns.xcodeproj -scheme YourFarmWithUnic
 
 | Area | Activities |
 | --- | --- |
-| Stables | Drag carrots, apples, liquorice treats or hay to the horse; fill a bucket at the tap and deliver it; sweep the dirty floor. Choose any of 13 horses here. |
-| Wash bay | Brush the coat; lift and pick all four hooves; wet/sponge/rinse the coat; drag on pad, saddle and bridle, or tap equipped pieces to remove them. Choose six coordinated palettes and edit the child's name/rider. |
+| Stables | Drag carrots, apples, liquorice treats or hay to the horse; fill a bucket at the tap and deliver it; muck out four small manure piles with a pooper scooper. Choose any of 13 horses here. |
+| Wash bay | Brush the coat; lift and scrub one front hoof; wet/sponge/rinse the coat; drag on pad, saddle and bridle, or tap equipped pieces to remove them. Choose six coordinated palettes and edit the child's name/rider. |
 | Paddocks | Tap and scoop five manure piles into a wheelbarrow; brush and refill a green trough; fill and deliver a bucket; drag in hay; hammer an occasionally broken fence rail. |
 | Chicken coop | Reveal eggs and drag them to a basket; scatter grain; hold the hose at the water dispenser; sweep; replace straw in four nests; give mealworms or vegetables. Tap chickens for a hop/cluck. |
 | Arena | Joystick plus Walk/Trot/Canter, eight facings, three freely available courses, automatic aligned jumps, playful detours/knockdowns, and tap-to-reset poles. |
@@ -75,7 +75,7 @@ The pinned Swift 6.0.3 archive is signature-verified before extraction using the
 
 ## Artwork and remaining release work
 
-Twenty-nine PNG assets are bundled for illustrated scenery, full-body care horses, overhead normal/unicorn rigs, a painted wing, portrait/outfit/tack previews, tools, magic effects and farmhouse furniture. `GameArt` crops atlas regions in memory, trims transparent margins for the rigs, and excludes environment divider gutters. Source masters and provenance notes remain in `artwork/drafts`.
+Thirty PNG assets are bundled for illustrated scenery, full-body care horses, overhead normal/unicorn rigs, a painted wing, portrait/outfit/tack previews, tools, magic effects and farmhouse furniture. `GameArt` crops atlas regions in memory, trims transparent margins for the rigs, and excludes environment divider gutters. Source masters and provenance notes remain in `artwork/drafts`.
 
 The navigation map and flight share one illustrated farm. New environment paintings follow the supplied concept direction, with interactive tools and animals rendered separately. Overhead horses use separate painted head, body and tail sections above gait-specific articulated legs, with rider/tack layers and animated painted wings. A shader matches unicorn hair to the child's palette. The native build exports an opaque 1024px AppIcon from the original branding master using the macOS SDK; its PNG output is intentionally ignored and regenerated during build. Full-sheet silhouette rectangles and runtime fragment filtering prevent neighbouring sprite pieces from appearing in the selected object; the extraction audit is in artwork/ATLAS_AUDIT.md.
 
@@ -102,3 +102,11 @@ Validation for this update: 37 local model tests passed; all Apple app sources p
 ## Eating sound update
 
 The four food effects now use 3.1-second, 44.1 kHz bite/chew/grinding textures with irregular broadband cracks and softer mouth sounds, rather than periodic pitched tones. These are original synthesized Foley-style effects, not animal recordings. Feeding plays the eating effect without a simultaneous completion chime; occasional post-eating farts wait until the longer chewing clip has finished. Regenerate only these four effects with `python scripts/generate-eating-audio.py`; the full audio generator calls the same script. WAV format, nonzero signal, unclipped peaks and deterministic distinct outputs were checked; all 37 local model tests passed and Apple sources parsed.
+
+## Natural interaction and sourced audio update
+
+The home screen no longer has the bottom area menu; the unobtrusive map markers remain tappable and accessible. The stable tap is mounted lower on the left side wall. Four small manure patches replace the crowded dirty floor, with an illustrated blue pooper scooper and collection pan. The stable task retains its saved activity ID for compatibility. Hoof picking now requires just one front hoof: the painted leg has separate upper/lower segments, the knee folds backward, and the interaction target follows the moving hoof. Head-shaped bridle straps replace the loose bridle picture on care horses. A black wheeled tack trolley follows the user's photograph, with pad, saddle and bridle placed on its actual supports.
+
+Pole Practice explicitly shows On/Off. Disabled poles rest stacked at the side; enabled poles lie across the circular track. Instructions explain that Go makes the horse step over them and a full circuit counts as pole practice.
+
+Eating now uses InspectorJ's recorded carrot mastication (CC BY 3.0) mixed with StarNinjas' eating crunches (CC0), instead of synthesized grinding noise. The four variants are edited mixes of those source sounds, not recordings of four separate foods. Running water uses rubberduck's CC0 Water Flowing loop and plays continuously during dispenser filling. Source files, licences and provenance are retained in [audio/SOURCES.md](audio/SOURCES.md); required attribution also appears in Sound settings. Assets stay bundled for offline play. Regeneration uses ffmpeg via scripts/generate-eating-audio.py.

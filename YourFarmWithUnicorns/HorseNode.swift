@@ -20,6 +20,7 @@ final class HorseNode: SKNode {
     private var headNode: SKShapeNode?
     private var carePortrait: SKNode?
     private var careLegs: [SKSpriteNode] = []
+    private var careLowerLegs: [SKSpriteNode] = []
     private var liftedCareLeg: Int?
     private var paintedHead: SKSpriteNode?
     private var paintedTail: SKSpriteNode?
@@ -135,11 +136,21 @@ final class HorseNode: SKNode {
                     let x = cuts[index] * CGFloat(full.width), span = (cuts[index + 1] - cuts[index]) * CGFloat(full.width)
                     guard let slice = full.cropping(to: CGRect(x: x, y: CGFloat(full.height) * 0.66,
                                                               width: span, height: CGFloat(full.height) * 0.34)) else { continue }
-                    let leg = SKSpriteNode(texture: SKTexture(cgImage: slice))
-                    leg.size = CGSize(width: 96 * (cuts[index + 1] - cuts[index]), height: height * 0.34)
+                    let bounds = Self.visibleBounds(slice)
+                    let split = max(1, bounds.height * 0.40)
+                    guard let top = slice.cropping(to: CGRect(x: bounds.minX, y: bounds.minY, width: bounds.width, height: split)),
+                          let bottom = slice.cropping(to: CGRect(x: bounds.minX, y: bounds.minY + split, width: bounds.width, height: bounds.height - split)) else { continue }
+                    let pixelScale = 96 / CGFloat(full.width)
+                    let leg = SKSpriteNode(texture: SKTexture(cgImage: top))
+                    leg.size = CGSize(width: bounds.width * pixelScale, height: split * pixelScale)
                     leg.anchorPoint = CGPoint(x: 0.5, y: 1)
-                    leg.position = CGPoint(x: 96 * ((cuts[index] + cuts[index + 1]) / 2 - 0.5), y: -height * 0.16)
-                    painted.addChild(leg); careLegs.append(leg)
+                    leg.position = CGPoint(x: (x + bounds.midX) * pixelScale - 48,
+                                           y: -height * 0.16 - bounds.minY * pixelScale)
+                    let lower = SKSpriteNode(texture: SKTexture(cgImage: bottom))
+                    lower.size = CGSize(width: bounds.width * pixelScale, height: (bounds.height - split) * pixelScale)
+                    lower.anchorPoint = CGPoint(x: 0.5, y: 1); lower.position = CGPoint(x: 0, y: -leg.size.height)
+                    leg.addChild(lower); painted.addChild(leg)
+                    careLegs.append(leg); careLowerLegs.append(lower)
                 }
             }
             figure.isHidden = true; addChild(painted); carePortrait = painted
@@ -147,15 +158,15 @@ final class HorseNode: SKNode {
             let items: [(Bool, UIImage?, CGPoint, CGSize)] = [
                 (player.tack.saddlePad, GameArt.pad(player.palette), CGPoint(x: 4, y: 16), CGSize(width: 34, height: 28)),
                 (player.tack.saddle, GameArt.region(sheet: "CareTackSheet", column: 0, row: 3, columns: 4, rows: 4),
-                 CGPoint(x: 4, y: 19), CGSize(width: 28, height: 27)),
-                (player.tack.bridle, GameArt.region(sheet: "CareTackSheet", column: 2, row: 3, columns: 4, rows: 4),
-                 CGPoint(x: -33, y: 18), CGSize(width: 20, height: 27))
+                 CGPoint(x: 4, y: 19), CGSize(width: 28, height: 27))
             ]
             for (visible, image, location, size) in items where visible {
                 guard let image else { continue }
                 let tack = SKSpriteNode(texture: SKTexture(image: image)); tack.size = size
                 tack.position = location; tack.zPosition = 2; addChild(tack)
             }
+            if player.tack.bridle { addFittedBridle(color: player.palette.uiColor) }
+
         }
         setScale(ponyScale)
     }
@@ -212,12 +223,49 @@ final class HorseNode: SKNode {
             wing.xScale = side; wing.zPosition = -0.1; figure.addChild(wing); wings.append(wing)
         }
     }
+    private static func visibleBounds(_ image: CGImage) -> CGRect {
+        let width = image.width, height = image.height
+        var bytes = [UInt8](repeating: 0, count: width * height * 4)
+        return bytes.withUnsafeMutableBytes { buffer in
+            guard let context = CGContext(data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8,
+                                          bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                                          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return CGRect(x: 0, y: 0, width: width, height: height) }
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            let pixels = buffer.bindMemory(to: UInt8.self)
+            var minX = width, minY = height, maxX = 0, maxY = 0
+            for y in 0..<height { for x in 0..<width where pixels[(y * width + x) * 4 + 3] > 24 {
+                minX = min(minX, x); minY = min(minY, y); maxX = max(maxX, x); maxY = max(maxY, y)
+            } }
+            guard minX <= maxX, minY <= maxY else { return CGRect(x: 0, y: 0, width: width, height: height) }
+            return CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
+        }
+    }
+    func careHoofPoint(_ index: Int, in node: SKNode) -> CGPoint {
+        guard careLowerLegs.indices.contains(index) else { return convert(CGPoint(x: -20, y: -35), to: node) }
+        let hoof = careLowerLegs[index]
+        return hoof.convert(CGPoint(x: 0, y: -hoof.size.height + 3), to: node)
+    }
     func liftCareLeg(_ index: Int?) {
         guard liftedCareLeg != index else { return }
         liftedCareLeg = index
         for (legIndex, leg) in careLegs.enumerated() {
-            leg.run(.rotate(toAngle: legIndex == index ? (legIndex < 2 ? 0.85 : -0.85) : 0, duration: 0.22), withKey: "hoof-lift")
+            leg.run(.rotate(toAngle: legIndex == index ? -0.24 : 0, duration: 0.32), withKey: "hoof-lift")
+            careLowerLegs[legIndex].run(.rotate(toAngle: legIndex == index ? 1.95 : 0, duration: 0.36), withKey: "knee-fold")
         }
+    }
+    private func addFittedBridle(color: UIColor) {
+        // Head-shaped straps hug the left-facing portrait's poll, cheek and muzzle.
+        let straps = CGMutablePath()
+        straps.move(to: CGPoint(x: -30, y: 33)); straps.addQuadCurve(to: CGPoint(x: -24, y: 21), control: CGPoint(x: -22, y: 32))
+        straps.move(to: CGPoint(x: -31, y: 28)); straps.addLine(to: CGPoint(x: -38, y: 13))
+        straps.move(to: CGPoint(x: -44, y: 17)); straps.addQuadCurve(to: CGPoint(x: -38, y: 11), control: CGPoint(x: -42, y: 10))
+        straps.move(to: CGPoint(x: -24, y: 21)); straps.addQuadCurve(to: CGPoint(x: -38, y: 11), control: CGPoint(x: -27, y: 11))
+        let leather = SKShapeNode(path: straps); leather.strokeColor = UIColor(red: 0.20, green: 0.12, blue: 0.06, alpha: 1)
+        leather.lineWidth = 1.6; leather.zPosition = 3; addChild(leather)
+        let trim = SKShapeNode(path: straps); trim.strokeColor = color.withAlphaComponent(0.7); trim.lineWidth = 0.65
+        trim.zPosition = 3.1; addChild(trim)
+        let ring = SKShapeNode(circleOfRadius: 1.7); ring.position = CGPoint(x: -38, y: 11)
+        ring.strokeColor = .lightGray; ring.lineWidth = 0.7; ring.fillColor = .clear; ring.zPosition = 4; addChild(ring)
     }
     func eat() {
         headNode?.run(.repeat(.sequence([.moveBy(x: 0, y: -3, duration: 0.2), .moveBy(x: 0, y: 3, duration: 0.2)]), count: 4))
@@ -268,7 +316,7 @@ final class HorseNode: SKNode {
                 pad.position.y = 39; saddle.position.y = 42; riderBody.position.y = 49; riderHead.position.y = 63
                 riderBody.zPosition = 2; riderHead.zPosition = 3
                 for node in [pad, saddle, riderBody, riderHead] { node.isHidden = lunging || (node === pad && !player.tack.saddlePad) || (node === saddle && !player.tack.saddle) }
-                if lunging {
+                if lunging || player.tack.bridle {
                     let halter = SKShapeNode(ellipseOf: CGSize(width: 13, height: 8))
                     halter.position = bridleAttachment; halter.strokeColor = player.palette.uiColor
                     halter.lineWidth = 2; halter.fillColor = .clear; angledFigure.addChild(halter)

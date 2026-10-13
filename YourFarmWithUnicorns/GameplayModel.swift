@@ -52,7 +52,7 @@ enum FarmActivity: String, CaseIterable, Identifiable {
         switch self {
         case .feed: return "Feed Horse"
         case .stableWater, .paddockWater: return "Water Bucket"
-        case .sweepStable: return "Sweep Stable"
+        case .sweepStable: return "Muck Out Stable"
         case .brush: return "Brush Coat"
         case .hooves: return "Pick Hooves"
         case .wash: return "Wash Horse"
@@ -73,7 +73,8 @@ enum FarmActivity: String, CaseIterable, Identifiable {
         switch self {
         case .feed: return "🥕"
         case .stableWater, .paddockWater, .coopWater: return "💧"
-        case .sweepStable, .sweepCoop: return "🧹"
+        case .sweepStable: return "🪏"
+        case .sweepCoop: return "🧹"
         case .brush: return "🪮"
         case .hooves: return "🧲"
         case .wash: return "🫧"
@@ -160,7 +161,7 @@ struct ChoreGame {
         }
     }
     mutating func liftHoof(_ index: Int) {
-        guard activity == .hooves, !completed, (0..<4).contains(index), hoofPicks[index] < 3 else { return }
+        guard activity == .hooves, !completed, index == 0, hoofPicks[index] < 3 else { return }
         liftedHoof = index
     }
     mutating func scrubHoof(distance: Double) {
@@ -168,10 +169,10 @@ struct ChoreGame {
               distance.isFinite, distance > 0 else { return }
         hoofCleaning[index] = min(1, hoofCleaning[index] + min(distance, 60) / 180)
         hoofPicks[index] = Int(hoofCleaning[index] * 3)
-        progress = hoofCleaning.reduce(0, +) / 4
+        progress = hoofCleaning[0]
         if hoofCleaning[index] >= 1 {
             collection.insert(index); liftedHoof = nil
-            completed = collection.count == 4
+            completed = collection.contains(0)
         }
     }
     mutating func dropAtTap() {

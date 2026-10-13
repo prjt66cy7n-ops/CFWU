@@ -17,6 +17,12 @@ final class TaskScene: SKScene {
     private var feedingPoint: CGPoint?
     private var feedingElapsed = 0.0
     private var feedingCluckElapsed = 0.0
+    private var waterFlowing = false
+    private func setWaterFlow(_ running: Bool) {
+        let enabled = running && player.sfxEnabled
+        guard waterFlowing != enabled else { return }
+        waterFlowing = enabled; GameAudio.waterFlow(enabled: enabled)
+    }
     private var area: FarmArea { FarmArea.allCases.first { $0.activities.contains(game.activity) }! }
     private var dragging: String?
     private var dragPosition: CGPoint?
@@ -49,8 +55,8 @@ final class TaskScene: SKScene {
         [CGPoint(x: 100, y: 95), CGPoint(x: 100, y: 175), CGPoint(x: 180, y: 175), CGPoint(x: 100, y: 255)][variant % 4]
     }
     private let bodyPoint = CGPoint(x: 575, y: 325)
-    private var tapPoint: CGPoint { CGPoint(x: 180, y: game.activity == .paddockWater ? 355 : 430) }
-    private var bucketFillPoint: CGPoint { CGPoint(x: 180, y: tapPoint.y - 95) }
+    private var tapPoint: CGPoint { game.activity == .paddockWater ? CGPoint(x: 180, y: 355) : CGPoint(x: 72, y: 345) }
+    private var bucketFillPoint: CGPoint { CGPoint(x: tapPoint.x, y: tapPoint.y - 95) }
     var foodVariant = 0 { didSet { render() } }
     var guide: String {
         if game.completed { return "✨ ✓ · Tap the activity to play again" }
@@ -61,13 +67,14 @@ final class TaskScene: SKScene {
             return game.bucketFull ? "Drag the full bucket to your horse" : (game.bucketAtTap ? "Tap the tap to fill your bucket" : "Drag the bucket under the tap")
         case .brush: return "Brush back and forth over your horse"
         case .wash: return ["Drag the hose to wet the coat", "Scrub with the sponge", "Drag the hose to rinse"][min(2, game.stage)]
-        case .hooves: return "Tap a hoof to lift · Scrub it with the pick · Do all four"
+        case .hooves: return "Tap the front hoof to lift · Scrub with the pick"
         case .tack: return "Drag pad, saddle and bridle onto the horse · Tap equipped tack to remove"
         case .eggs: return "Tap a nest · Drag each egg to the basket"
         case .straw: return "Tap each nest to clear straw · Drag fresh straw into it"
         case .fence: return game.brokenFence ? (game.hammerAtFence ? "Tap the hammer at the fence to fix the rail" : "Drag the hammer to the damaged fence rail") : "✓ The fence is sound · Try another activity"
         case .coopWater: return "Drag the hose to the water container · Hold it there"
-        case .sweepStable, .sweepCoop: return "Sweep back and forth across the dirty patches"
+        case .sweepStable: return "Work the scooper through the small manure piles"
+        case .sweepCoop: return "Sweep back and forth across the dirty patches"
         case .grain: return "Drag the scoop across the ground"
         case .hay: return "Drag the hay into the feeding spot"
         case .treats: return "Drag a treat onto the ground for the chickens"
@@ -86,7 +93,7 @@ final class TaskScene: SKScene {
     override func didMove(to view: SKView) { addChild(world); animals.zPosition = 3; addChild(animals); render(); demonstrate() }
     func choose(_ activity: FarmActivity) {
         entry.select(activity, tack: player.tack)
-        reportedCompletion = false; dragging = nil; dragPosition = nil; lastDrag = nil
+        setWaterFlow(false); reportedCompletion = false; dragging = nil; dragPosition = nil; lastDrag = nil
         render(); demonstrate(); notify()
     }
     func updatePlayer(_ player: Player) {
@@ -95,7 +102,7 @@ final class TaskScene: SKScene {
         if changedAppearance { horse = HorseNode(player: player, mounted: false) }
         game.tack = player.tack; render()
     }
-    func pause() { dragging = nil; dragPosition = nil; lastDrag = nil; previousTime = nil; isPaused = true; render() }
+    func pause() { setWaterFlow(false); dragging = nil; dragPosition = nil; lastDrag = nil; previousTime = nil; isPaused = true; render() }
     func resume() { previousTime = nil; isPaused = false }
     private func sprite(_ name: String, sheet: String, column: Int, row: Int, columns: Int = 4, rows: Int = 4, at point: CGPoint, width: CGFloat) {
         guard let image = GameArt.region(sheet: sheet, column: column, row: row, columns: columns, rows: rows) else { return }
@@ -132,14 +139,10 @@ final class TaskScene: SKScene {
             world.addChild(background); floor.isHidden = true
         }
         if washBay {
-            let rack = SKShapeNode(rectOf: CGSize(width: 100, height: 230), cornerRadius: 8)
-            rack.position = CGPoint(x: 880, y: 265); rack.fillColor = UIColor(red: 0.53, green: 0.32, blue: 0.14, alpha: 1)
-            rack.strokeColor = .brown; rack.zPosition = -1; world.addChild(rack)
-            for height in [180, 260, 340] {
-                let peg = SKShapeNode(rectOf: CGSize(width: 125, height: 10), cornerRadius: 3)
-                peg.position = CGPoint(x: 880, y: height); peg.fillColor = .brown; peg.strokeColor = .clear
-                world.addChild(peg)
-            }
+            sprite("select-tack", sheet: "StableEquipmentSheet", column: 0, row: 0, columns: 2, rows: 2,
+                   at: CGPoint(x: 870, y: 250), width: 290)
+            world.children.last?.zPosition = -0.1
+
         }
         if coop {
             if animals.children.isEmpty {
@@ -178,8 +181,8 @@ final class TaskScene: SKScene {
         let activity = game.activity
         renderingActive = active; renderingActivity = activity
         let source = source(for: activity, stage: game.stage)
-        let tapPoint = CGPoint(x: 180, y: activity == .paddockWater ? 355 : 430)
-        let bucketFillPoint = CGPoint(x: 180, y: tapPoint.y - 95)
+        let tapPoint = activity == .paddockWater ? CGPoint(x: 180, y: 355) : CGPoint(x: 72, y: 345)
+        let bucketFillPoint = CGPoint(x: tapPoint.x, y: tapPoint.y - 95)
         switch activity {
         case .feed:
             zone("destination", at: CGPoint(x: 470, y: 325), width: 140, height: 130)
@@ -192,8 +195,8 @@ final class TaskScene: SKScene {
                 mount.position = tapPoint; mount.fillColor = UIColor(red: 0.57, green: 0.35, blue: 0.15, alpha: 1)
                 mount.strokeColor = .brown; world.addChild(mount)
             }
-            symbol("🚰", name: "tap", at: tapPoint)
-            zone("tap", at: CGPoint(x: 180, y: tapPoint.y - 65), width: 160, height: 170, glow: !game.bucketFull)
+            sprite("tap", sheet: "StableEquipmentSheet", column: 1, row: 1, columns: 2, rows: 2, at: tapPoint, width: 60)
+            zone("tap", at: CGPoint(x: tapPoint.x, y: tapPoint.y - 65), width: 160, height: 170, glow: !game.bucketFull)
             zone("destination", at: CGPoint(x: 505, y: 260), width: 180, height: 140, glow: game.bucketFull)
             sprite("tool", sheet: "CareTackSheet", column: game.bucketFull ? 1 : 0, row: 1,
                    at: game.completed ? CGPoint(x: 505, y: 260) : (game.bucketAtTap && dragPosition == nil ? bucketFillPoint : source), width: 120)
@@ -213,7 +216,7 @@ final class TaskScene: SKScene {
                 world.children.last?.name = "select-wash"
             }
         case .hooves:
-            for index in 0..<4 {
+            for index in 0..<1 {
                 let point = hoofPoint(index)
                 symbol(game.collection.contains(index) ? "✓" : "•", name: "hoof-\(index)", at: point, size: 36)
                 zone("hoof-\(index)", at: point, width: 70, height: 70, glow: !game.collection.contains(index))
@@ -231,11 +234,11 @@ final class TaskScene: SKScene {
                     target.name = active ? "equipped-\(index)" : "select-tack"; target.zPosition = 4
                     world.addChild(target); continue
                 }
-                let position = CGPoint(x: 880, y: 180 + index * 80)
+                let position = [CGPoint(x: 830, y: 260), CGPoint(x: 835, y: 333), CGPoint(x: 925, y: 315)][index]
                 if index == 0 {
-                    sprite(equipped ? "equipped-0" : "tack-0", sheet: "TackPaletteSheet", column: player.palette.artColumn, row: 0, columns: 6, rows: 2, at: position, width: 115)
+                    sprite(equipped ? "equipped-0" : "tack-0", sheet: "TackPaletteSheet", column: player.palette.artColumn, row: 0, columns: 6, rows: 2, at: position, width: 85)
                 } else {
-                    sprite(equipped ? "equipped-\(index)" : "tack-\(index)", sheet: "CareTackSheet", column: index == 1 ? 0 : 2, row: 3, at: position, width: 115)
+                    sprite(equipped ? "equipped-\(index)" : "tack-\(index)", sheet: "CareTackSheet", column: index == 1 ? 0 : 2, row: 3, at: position, width: 85)
                 }
             }
         case .manure:
@@ -357,13 +360,23 @@ final class TaskScene: SKScene {
             }
         case .sweepStable, .sweepCoop:
             zone("destination", at: CGPoint(x: 555, y: 200), width: 650, height: 240)
-            for index in 0..<(activity == .sweepCoop ? 5 : 22) {
+            for index in 0..<(activity == .sweepCoop ? 5 : 4) {
                 let point = CGPoint(x: 260 + (index * 137) % 590, y: 85 + (index * 61) % 210)
                 sprite("dirt-\(index)", sheet: "CoopPaddockSheet", column: 2, row: 3,
-                       at: point, width: CGFloat((activity == .sweepCoop ? 20 : 28) + (index * 13) % (activity == .sweepCoop ? 16 : 37)))
+                       at: point, width: CGFloat(24 + (index * 13) % 14))
                 if let patch = world.children.last { patch.alpha = CGFloat(1 - game.progress); patch.zPosition = -0.2 }
             }
-            sprite("tool", sheet: "CareTackSheet", column: 2, row: 1, at: source, width: 120)
+            if activity == .sweepStable {
+                sprite("tool", sheet: "StableEquipmentSheet", column: 1, row: 0, columns: 2, rows: 2, at: source, width: 120)
+                sprite("muck-pan", sheet: "StableEquipmentSheet", column: 0, row: 1, columns: 2, rows: 2,
+                       at: CGPoint(x: 875, y: 135), width: 100)
+                world.children.last?.name = active ? nil : "select-sweepStable"
+                for index in 0..<Int(game.progress * 4) {
+                    sprite("collected-muck", sheet: "CoopPaddockSheet", column: 1, row: 2,
+                           at: CGPoint(x: 855 + (index % 2) * 18, y: 130 + (index / 2) * 12), width: 25)
+                    world.children.last?.name = nil
+                }
+            } else { sprite("tool", sheet: "CareTackSheet", column: 2, row: 1, at: source, width: 120) }
         case .treats:
             zone("destination", at: CGPoint(x: 605, y: 240), width: 490, height: 220)
             sprite("tool", sheet: "CoopPaddockSheet", column: foodVariant % 2 == 0 ? 0 : 3, row: foodVariant % 2 == 0 ? 2 : 1, at: source, width: 130)
@@ -384,15 +397,16 @@ final class TaskScene: SKScene {
         }
     }
     private func hoofPoint(_ index: Int) -> CGPoint {
-        let width = CGFloat(96 * 2.6 * player.horse.size.scale)
-        let image = GameArt.silhouette(sheet: "HorseBodySheet", index: player.horse.portraitIndex)
-        let ratio = image.map { $0.size.height / $0.size.width } ?? 0.9
-        // Care artwork is side-on: all four hoof handles follow its ground line,
-        // rather than the former overhead figure's four corners.
-        let offsets: [CGFloat] = [-0.30, -0.10, 0.17, 0.34]
-        let lifted = game.activity == .hooves && game.liftedHoof == index
-        return CGPoint(x: bodyPoint.x + offsets[index] * width + (lifted ? width * 0.18 * (index < 2 ? 1 : -1) : 0),
-                       y: bodyPoint.y - width * ratio / 2 + 10 + (lifted ? width * 0.1 : 0))
+        horse.careHoofPoint(index, in: world)
+    }
+    private func updateHoofTarget() {
+        guard game.activity == .hooves else { return }
+        let point = hoofPoint(0), rect = CGRect(x: point.x - 35, y: point.y - 35, width: 70, height: 70)
+        targets["hoof-0"] = rect
+        for node in world.children where node.name == "hoof-0" {
+            if let shape = node as? SKShapeNode { shape.path = CGPath(roundedRect: rect, cornerWidth: 16, cornerHeight: 16, transform: nil) }
+            else { node.position = point }
+        }
     }
     private func pilePoint(_ index: Int) -> CGPoint {
         let points = [CGPoint(x: 350, y: 185), CGPoint(x: 540, y: 145), CGPoint(x: 750, y: 215), CGPoint(x: 410, y: 285), CGPoint(x: 740, y: 330)]
@@ -442,7 +456,7 @@ final class TaskScene: SKScene {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let point = touches.first?.location(in: self) else { return }
         if game.activity == .hooves && !game.completed,
-           let closest = (0..<4).min(by: {
+           let closest = (0..<1).min(by: {
                hypot(point.x - hoofPoint($0).x, point.y - hoofPoint($0).y) < hypot(point.x - hoofPoint($1).x, point.y - hoofPoint($1).y)
            }), hypot(point.x - hoofPoint(closest).x, point.y - hoofPoint(closest).y) < 43 {
             game.liftHoof(closest); render(); notify(); return
@@ -555,6 +569,7 @@ final class TaskScene: SKScene {
         defer { previousTime = currentTime }
         guard let previous = previousTime else { return }
         let dt = min(0.1, max(0, currentTime - previous))
+        updateHoofTarget()
         if feedingPoint != nil {
             feedingElapsed += dt; feedingCluckElapsed += dt
             if feedingCluckElapsed >= 1.25 {
@@ -572,8 +587,10 @@ final class TaskScene: SKScene {
                 GameAudio.effect(sound, enabled: player.sfxEnabled); horse.flickTail()
             }
         }
-        guard game.activity == .coopWater, dragging == "tool", !game.completed,
-              let point = dragPosition, targets["destination"]?.contains(point) == true else { return }
-        game.holdWater(seconds: dt); GameAudio.effect("water", enabled: player.sfxEnabled); render(); notify()
+        let filling = game.activity == .coopWater && dragging == "tool" && !game.completed &&
+            dragPosition.map { targets["destination"]?.contains($0) == true } == true
+        setWaterFlow(filling)
+        guard filling else { return }
+        game.holdWater(seconds: dt); render(); notify()
     }
 }

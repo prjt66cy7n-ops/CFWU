@@ -2,6 +2,13 @@ import SpriteKit
 import SwiftUI
 
 enum FarmLandscape {
+    static let paintedLocations: [(FarmArea, CGPoint)] = [
+                (.stables, CGPoint(x: 270, y: 495)), (.washBay, CGPoint(x: 435, y: 480)),
+                (.arena, CGPoint(x: 665, y: 365)), (.roundYard, CGPoint(x: 855, y: 165)),
+                (.paddock, CGPoint(x: 235, y: 210)), (.chickenCoop, CGPoint(x: 140, y: 345)),
+                (.farmhouse, CGPoint(x: 550, y: 130))
+            ]
+
     static let locations: [(FarmArea, CGPoint)] = [
         (.stables, CGPoint(x: 235, y: 425)), (.washBay, CGPoint(x: 375, y: 400)),
         (.arena, CGPoint(x: 655, y: 365)), (.roundYard, CGPoint(x: 835, y: 175)),
@@ -15,12 +22,6 @@ enum FarmLandscape {
         if let background = GameArt.background(sheet: "FarmEnvironmentSheet", column: 1, row: 1,
                                                size: CGSize(width: 1000, height: 620)) {
             root.addChild(background)
-            let paintedLocations: [(FarmArea, CGPoint)] = [
-                (.stables, CGPoint(x: 270, y: 495)), (.washBay, CGPoint(x: 435, y: 480)),
-                (.arena, CGPoint(x: 665, y: 365)), (.roundYard, CGPoint(x: 855, y: 165)),
-                (.paddock, CGPoint(x: 235, y: 210)), (.chickenCoop, CGPoint(x: 140, y: 345)),
-                (.farmhouse, CGPoint(x: 550, y: 130))
-            ]
             if showHotspots {
                 for (area, point) in paintedLocations {
                     // Small visible marker; the clear surrounding circle keeps

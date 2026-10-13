@@ -17,9 +17,9 @@ final class AppSmokeTests: XCTestCase {
         drag(canvas, from: CGPoint(x: 100, y: 95), to: CGPoint(x: 470, y: 325))
         assertCompleted(app)
         app.buttons["activity-stableWater"].tap()
-        drag(canvas, from: CGPoint(x: 300, y: 95), to: CGPoint(x: 180, y: 335))
-        world(canvas, CGPoint(x: 180, y: 430)).tap()
-        drag(canvas, from: CGPoint(x: 180, y: 335), to: CGPoint(x: 505, y: 260))
+        drag(canvas, from: CGPoint(x: 300, y: 95), to: CGPoint(x: 72, y: 250))
+        world(canvas, CGPoint(x: 72, y: 345)).tap()
+        drag(canvas, from: CGPoint(x: 72, y: 250), to: CGPoint(x: 505, y: 260))
         assertCompleted(app)
         app.buttons["activity-sweepStable"].tap()
         for _ in 0..<3 { drag(canvas, from: CGPoint(x: 820, y: 95), to: CGPoint(x: 310, y: 205)) }

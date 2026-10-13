@@ -9,10 +9,24 @@ enum GameAudio {
         configured = true
     }
     private static var musicPlayer: AVAudioPlayer?
+    private static var waterPlayer: AVAudioPlayer?
     private static var musicScene = ""
     private static var effectPlayers: [String: AVAudioPlayer] = [:]
     private static var lastEffect: [String: Date] = [:]
-    static func stopEffects() { queue.async { for player in effectPlayers.values { player.stop() } } }
+    static func stopEffects() { queue.async { for player in effectPlayers.values { player.stop() }; waterPlayer?.stop() } }
+    static func waterFlow(enabled: Bool) {
+        queue.async {
+            guard enabled else { waterPlayer?.stop(); return }
+            do {
+                try configure()
+                if waterPlayer == nil, let url = Bundle.main.url(forResource: "sfx-water", withExtension: "wav") {
+                    waterPlayer = try AVAudioPlayer(contentsOf: url)
+                    waterPlayer?.numberOfLoops = -1; waterPlayer?.volume = 0.25
+                }
+                if waterPlayer?.isPlaying != true { waterPlayer?.play() }
+            } catch { }
+        }
+    }
     static func chime(enabled: Bool) { effect("task", enabled: enabled) }
     static func music(scene: String, enabled: Bool) {
         queue.async { playMusic(scene: scene, enabled: enabled) }
@@ -45,6 +59,7 @@ enum GameAudio {
                 guard let url = Bundle.main.url(forResource: resource, withExtension: "wav") else { return }
                 let player = try AVAudioPlayer(contentsOf: url); player.volume = 0.3; effectPlayers[name] = player
             }
+            if name == "water", effectPlayers[name]?.isPlaying == true { return }
             effectPlayers[name]?.currentTime = 0; effectPlayers[name]?.play()
         } catch { }
     }

@@ -52,6 +52,10 @@ final class GameplayTests: XCTestCase {
             }
         }
         XCTAssertNotNil(GameArt.silhouette(sheet: "UnicornWing", index: 0, columns: 1, rows: 1))
+        for row in 0..<2 { for column in 0..<2 {
+            let image = try XCTUnwrap(GameArt.region(sheet: "StableEquipmentSheet", column: column, row: row, columns: 2, rows: 2))
+            XCTAssertGreaterThan(image.size.width, 200); XCTAssertGreaterThan(image.size.height, 200)
+        } }
         XCTAssertNotNil(UIImage(named: "UnicornBrand"))
     }
     #endif
@@ -160,16 +164,16 @@ final class GameplayTests: XCTestCase {
         for _ in 0..<4 { game.scrub(distance: 80) }
         XCTAssertTrue(game.completed)
     }
-    func testAllFourHoovesMustBeLiftedAndPicked() {
+    func testFrontHoofMustBeLiftedAndScrubbed() {
         var game = ChoreGame(activity: .hooves)
-        for index in 0..<4 {
-            game.liftHoof(index); XCTAssertEqual(game.liftedHoof, index)
-            game.scrubHoof(distance: .nan)
-            XCTAssertEqual(game.hoofPicks[index], 0)
-            for _ in 0..<3 { game.scrubHoof(distance: 60) }
-            XCTAssertEqual(game.hoofPicks[index], 3)
-        }
-        XCTAssertTrue(game.completed); XCTAssertEqual(game.collection.count, 4)
+        game.scrubHoof(distance: 60); XCTAssertEqual(game.progress, 0)
+        game.liftHoof(3); XCTAssertNil(game.liftedHoof)
+        game.liftHoof(0); XCTAssertEqual(game.liftedHoof, 0)
+        game.scrubHoof(distance: .nan); XCTAssertEqual(game.progress, 0)
+        game.scrubHoof(distance: 60); XCTAssertFalse(game.completed)
+        XCTAssertEqual(game.progress, 1.0 / 3, accuracy: 0.0001)
+        for _ in 0..<2 { game.scrubHoof(distance: 60) }
+        XCTAssertTrue(game.completed); XCTAssertEqual(game.collection, [0]); XCTAssertNil(game.liftedHoof)
     }
     func testEquippedTackCanBeRemovedAndReappliedWithoutAutoCompletion() {
         var game = ChoreGame(activity: .tack, tack: Tack(saddlePad: true, saddle: true, bridle: true))
