@@ -10,7 +10,7 @@ enum FarmLandscape {
     ]
     // Shared draft layout keeps flight above the same farm as the map.
     // Approved scene exports replace these shapes during final art integration.
-    static func make(playerName: String) -> SKNode {
+    static func make(playerName: String, showHotspots: Bool = false) -> SKNode {
         let root = SKNode()
         if let background = GameArt.background(sheet: "FarmEnvironmentSheet", column: 1, row: 1,
                                                size: CGSize(width: 1000, height: 620)) {
@@ -21,22 +21,21 @@ enum FarmLandscape {
                 (.paddock, CGPoint(x: 235, y: 210)), (.chickenCoop, CGPoint(x: 140, y: 345)),
                 (.farmhouse, CGPoint(x: 550, y: 130))
             ]
-            for (area, point) in paintedLocations {
-                let button = SKShapeNode(rectOf: CGSize(width: area == .washBay ? 120 : 150, height: 48), cornerRadius: 18)
-                button.name = "area-\(area.rawValue)"; button.position = point
-                button.fillColor = UIColor(red: 1, green: 0.94, blue: 0.8, alpha: 0.94)
-                button.strokeColor = .brown; button.lineWidth = 2
-                let label = SKLabelNode(text: "\(area.icon) \(area.title)")
-                label.fontName = "AvenirNext-DemiBold"; label.fontSize = area == .washBay ? 15 : 17
-                label.fontColor = .brown; label.verticalAlignmentMode = .center; button.addChild(label)
-                root.addChild(button)
+            if showHotspots {
+                for (area, point) in paintedLocations {
+                    // Small visible marker; the clear surrounding circle keeps
+                    // the destination easy to tap without covering the painting.
+                    let target = SKShapeNode(circleOfRadius: 32)
+                    target.name = "area-\(area.rawValue)"; target.position = point
+                    target.fillColor = .white.withAlphaComponent(0.001)
+                    target.strokeColor = .clear
+                    let dot = SKShapeNode(circleOfRadius: 7)
+                    dot.fillColor = UIColor(red: 1, green: 0.96, blue: 0.84, alpha: 1)
+                    dot.strokeColor = UIColor(red: 0.55, green: 0.32, blue: 0.16, alpha: 1)
+                    dot.lineWidth = 2
+                    target.addChild(dot); root.addChild(target)
+                }
             }
-            let sign = SKShapeNode(rectOf: CGSize(width: 350, height: 48), cornerRadius: 16)
-            sign.position = CGPoint(x: 440, y: 582); sign.fillColor = UIColor(red: 1, green: 0.94, blue: 0.8, alpha: 0.96)
-            sign.strokeColor = .brown
-            let title = SKLabelNode(text: "\(playerName)’s Farm")
-            title.fontName = "AvenirNext-DemiBold"; title.fontSize = min(26, 500 / CGFloat(max(20, playerName.count + 7)))
-            title.fontColor = .brown; title.verticalAlignmentMode = .center; sign.addChild(title); root.addChild(sign)
             return root
         }
         let ground = SKShapeNode(rect: CGRect(x: 0, y: 0, width: 1000, height: 620))
@@ -84,7 +83,7 @@ final class FarmScene: SKScene {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
     override func didMove(to view: SKView) { rebuild() }
     func updateName(_ name: String) { if playerName != name { playerName = name; rebuild() } }
-    private func rebuild() { removeAllChildren(); addChild(FarmLandscape.make(playerName: playerName)) }
+    private func rebuild() { removeAllChildren(); addChild(FarmLandscape.make(playerName: playerName, showHotspots: true)) }
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let point = touches.first?.location(in: self) else { return }
         for hit in nodes(at: point) {

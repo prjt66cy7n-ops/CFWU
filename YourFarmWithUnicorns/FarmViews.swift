@@ -116,7 +116,6 @@ struct FarmRootView: View {
             }
         } else {
             VStack(spacing: 7) {
-                Text("Tap a place to visit").font(.headline)
                 SpriteView(scene: map).clipShape(RoundedRectangle(cornerRadius: 24))
                     .onAppear {
                         map.updateName(player.name)
